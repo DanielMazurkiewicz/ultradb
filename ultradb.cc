@@ -1,147 +1,108 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
 
 #include <node_api.h>
 #include <assert.h>
 
+#include "napiMacros.h"
 
 
 napi_value close(napi_env env, const napi_callback_info info) {
     napi_status status;
-    const size_t argc_expected = 0;
-    size_t argc = argc_expected;
-    napi_value es_this;
-    status = napi_get_cb_info(env, info, &argc, nullptr, &es_this, nullptr);
-    assert(status == napi_ok);
+    getThis(thisObj, numberOfArguments, 0, status);
 
-    napi_value rawData;
-    status = napi_get_named_property(env, es_this, "rawData", &rawData);
-    assert(status == napi_ok);
+    var(rawData);
+    objPropertyGet(rawData, thisObj, "rawData");
 
-    void *p;
-    size_t pLength;
+    void *data;
+    size_t dataLength;
 
-    status = napi_get_arraybuffer_info(env,
-                                      rawData,
-                                      &p,
-                                      &pLength);
-    assert(status == napi_ok);
+    getArrayBuffer(data, dataLength, rawData, status);
 
-    if (munmap(p, pLength) == -1) {
-      napi_value error;
-      status = napi_create_string_utf8(env, "munmap", 6, &error);
-      assert(status == napi_ok);
-      status = napi_set_named_property(env, es_this, "error", error);
-      assert(status == napi_ok);
+    if (munmap(data, dataLength) == -1) {
+      var(error);
+      newStringUtf8(error, "munmap", 6, status);
+      objPropertySet(thisObj, "error", error, status);
     }
 
-    return es_this;
+    return thisObj;
 }
 
 napi_value CreateObject(napi_env env, const napi_callback_info info) {
   napi_status status;
 
-  size_t argc = 2;
-  napi_value args[2];
-  status = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-  assert(status == napi_ok);
+  getArguments(args, argsCount, 2, status);
 
-
-  napi_value obj;
-  status = napi_create_object(env, &obj);
-  assert(status == napi_ok);
-
-  status = napi_set_named_property(env, obj, "dbFileName", args[0]);
-  assert(status == napi_ok);
+  objCreate(obj, status);
+  objPropertySet(obj, "dbFileName", args[0], status);
 
   size_t strLength;
-  napi_get_value_string_utf8(env, args[0], NULL, 0, &strLength);
-  assert(status == napi_ok);
+  getStringUtf8Length(strLength, args[0]);
+
   char fileName[strLength + 1];
-  napi_get_value_string_utf8(env, args[0], fileName, strLength + 1, 0);
+  getStringUtf8(fileName, args[0], strLength);
 
+  var(error);
 
-  napi_value error;
+  int fileDescriptor;
+  fileDescriptor = open(fileName, O_RDONLY);
 
-
-  int fd;
-  fd = open(fileName, O_RDONLY);
-  if (fd == -1) {
-    status = napi_create_string_utf8(env, "opening file", 12, &error);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, obj, "error", error);
-    assert(status == napi_ok);
+  if (fileDescriptor == -1) {
+    newStringUtf8(error, "opening file", 12, status);
+    objPropertySet(obj, "error", error, status);
     return obj;
   }
 
   struct stat sb;
-  if (fstat(fd, &sb) == -1) {
-    status = napi_create_string_utf8(env, "fstat", 5, &error);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, obj, "error", error);
-    assert(status == napi_ok);
+  if (fstat(fileDescriptor, &sb) == -1) {
+    newStringUtf8(error, "fstat", 5, status);
+    objPropertySet(obj, "error", error, status);
     return obj;
   }
 
 
   if (!S_ISREG(sb.st_mode)) {
-    status = napi_create_string_utf8(env, "not a file", 10, &error);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, obj, "error", error);
-    assert(status == napi_ok);
+    newStringUtf8(error, "not a file", 10, status);
+    objPropertySet(obj, "error", error, status);
     return obj;
   }
 
-  void *p;
-  p = mmap (0, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
+  void *data;
+  data = mmap (0, sb.st_size, PROT_READ, MAP_SHARED, fileDescriptor, 0);
 
-  if (p == MAP_FAILED) {
-    status = napi_create_string_utf8(env, "mmap", 4, &error);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, obj, "error", error);
-    assert(status == napi_ok);
+  if (data == MAP_FAILED) {
+    newStringUtf8(error, "mmap", 4, status);
+    objPropertySet(obj, "error", error, status);
     return obj;
   }
 
-  if (close(fd) == -1) {
-    status = napi_create_string_utf8(env, "close", 5, &error);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, obj, "error", error);
-    assert(status == napi_ok);
+  if (close(fileDescriptor) == -1) {
+    newStringUtf8(error, "close", 5, status);
+    objPropertySet(obj, "error", error, status);
     return obj;
   }
 
-  napi_value fileData;
-  status = napi_create_external_arraybuffer(env,
-                                 p,
-                                 sb.st_size,
-                                 0,
-                                 NULL,
-                                 &fileData);
-  assert(status == napi_ok);
-  status = napi_set_named_property(env, obj, "rawData", fileData);
-  assert(status == napi_ok);
+  var(rawData);
+  assignArrayBuffer(rawData, data, sb.st_size, status);
+  objPropertySet(obj, "rawData", rawData, status);
 
-  napi_value closeProperty;
-  status = napi_create_function(env, "", NAPI_AUTO_LENGTH, close, nullptr, &closeProperty);
-  assert(status == napi_ok);
-  status = napi_set_named_property(env, obj, "close", closeProperty);
-  assert(status == napi_ok);
 
-  //off_t len;
+  var(closeFunction);
+  newFunction(closeFunction, close, status);
+  objPropertySet(obj, "close", closeFunction, status);
+
 
   return obj;
 }
 
 napi_value Init(napi_env env, napi_value exports) {
-  napi_value new_exports;
-  napi_status status =
-      napi_create_function(env, "", NAPI_AUTO_LENGTH, CreateObject, nullptr, &new_exports);
-  assert(status == napi_ok);
+  napi_status status;
+  var(new_exports);
+  newFunction(new_exports, CreateObject, status);
   return new_exports;
 }
 
