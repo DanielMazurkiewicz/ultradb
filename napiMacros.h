@@ -7,6 +7,7 @@
     objCreate(variableName, statusName)
     objPropertyGet(variableName, obj, propertyName, statusName)
     objPropertySet(obj, propertyName, variableName, statusName)
+    objPropertyDel(obj, propertyName, statusName)
 
     getThis(variableName, numberOfArguments, expectedNumberOfArguments, statusName)
     getArguments(arguments, numberOfArguments, expectedNumberOfArguments, statusName)
@@ -19,7 +20,9 @@
     newObject(variableName, statusName)
     newFunction(variableName, functionName, statusName)
     newStringUtf8(variableName, text, length, statusName)
+    newStringLatin1(variableName, text, length, statusName)
     newI32(variableName, value, statusName)
+    newDouble(variableName, value, statusName)
 
     assignArrayBuffer(variableName, buffer, length, statusName)
 
@@ -68,6 +71,19 @@
 
 #define objPropertySet_getMacro(_1,_2,_3,_4,NAME,...) NAME
 #define objPropertySet(...) objPropertySet_getMacro(__VA_ARGS__, objPropertySet_StatusCheck, objPropertySet_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define objPropertyDel_NoStatusCheck(obj, propertyName) \
+    napi_delete_property(env, obj, propertyName, NULL);
+
+#define objPropertyDel_StatusCheck(obj, propertyName, statusName) \
+    statusName = napi_delete_property(env, obj, propertyName, NULL); \
+    assert(statusName == napi_ok);
+
+#define objPropertyDel_getMacro(_1,_2,_3,NAME,...) NAME
+#define objPropertyDel(...) objPropertyDel_getMacro(__VA_ARGS__, objPropertyDel_StatusCheck, objPropertyDel_NoStatusCheck)(__VA_ARGS__)
 
 
 
@@ -157,6 +173,19 @@
 
 
 
+#define getU32_NoStatusCheck(variableName, napiVariableName) \
+    napi_get_value_uint32(env, napiVariableName, &variableName);
+
+#define getU32_StatusCheck(variableName, napiVariableName, statusName) \
+    statusName = napi_get_value_uint32(env, napiVariableName, &variableName); \
+    assert(statusName == napi_ok);
+
+#define getU32_getMacro(_1,_2,_3,NAME,...) NAME
+#define getU32(...) getU32_getMacro(__VA_ARGS__, getU32_StatusCheck, getU32_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
 #define newObject_NoStatusCheck(variableName) \
     napi_create_object(env, &variableName);
 
@@ -195,6 +224,19 @@
 
 
 
+#define newStringLatin1_NoStatusCheck(variableName, text, length) \
+    napi_create_string_latin1(env, text, length, &variableName);
+	
+#define newStringLatin1_StatusCheck(variableName, text, length, statusName) \
+    statusName = napi_create_string_latin1(env, text, length, &variableName); \
+    assert(statusName == napi_ok);
+
+#define newStringLatin1_getMacro(_1,_2,_3,_4,NAME,...) NAME
+#define newStringLatin1(...) newStringLatin1_getMacro(__VA_ARGS__, newStringLatin1_StatusCheck, newStringLatin1_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
 #define newI32_NoStatusCheck(variableName, value) \
     napi_create_int32(env, value, &variableName)
 	
@@ -204,6 +246,20 @@
 
 #define newI32_getMacro(_1,_2,_3,NAME,...) NAME
 #define newI32(...) newI32_getMacro(__VA_ARGS__, newI32_StatusCheck, newI32_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define newDouble_NoStatusCheck(variableName, value) \
+    napi_create_double(env, value, &variableName)
+	
+#define newDoubleStatusCheck(variableName, value, statusName) \
+    statusName = napi_create_double(env, value, &variableName) \
+    assert(statusName == napi_ok);
+
+#define newDouble_getMacro(_1,_2,_3,NAME,...) NAME
+#define newDouble(...) newDouble_getMacro(__VA_ARGS__, newDouble_StatusCheck, newDouble_NoStatusCheck)(__VA_ARGS__)
+
 
 
 

@@ -36,7 +36,7 @@ function Utf8ArrayToStr(array) {
 
 const UltraDB = require('./index.js');
 
-const ultradb = UltraDB('./db-test.txt');
+const ultradb = UltraDB('./test.txt', 2048);
 /*
 const raw = ultradb.rawData;
 const int = new Uint8Array(raw);
@@ -48,3 +48,6 @@ console.log(ultradb.close());
 ultradb.close();
 */
 console.log(ultradb);
+
+console.log(ultradb.close());
+
