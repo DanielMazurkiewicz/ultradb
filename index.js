@@ -1,1 +1,1 @@
-module.exports = require('bindings')('ultradb');
+module.exports = require('./build/Release/ultradb.node');

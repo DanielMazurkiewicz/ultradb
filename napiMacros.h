@@ -15,6 +15,7 @@
     getStringUtf8Length(variableName, napiText, statusName)
     getStringUtf8(variableName, napiText, length, statusName)
     getArrayBuffer(variableName, lengthVariableName, napiArrayBuffer, statusName)
+    getArrayBufferPointer(variableName, napiArrayBuffer, statusName)
     getI32(variableName, napiVariableName, statusName)
 
     newObject(variableName, statusName)
@@ -121,6 +122,24 @@
 
 
 
+#define getThisAndArguments_NoStatusCheck(this, arguments, numberOfArguments, expectedNumberOfArguments) \
+    size_t numberOfArguments = expectedNumberOfArguments; \
+    napi_value this; \
+    napi_value arguments[expectedNumberOfArguments]; \
+    napi_get_cb_info(env, info, &numberOfArguments, arguments, &this, nullptr);
+	
+#define getThisAndArguments_StatusCheck(this, arguments, numberOfArguments, expectedNumberOfArguments, statusName) \
+    size_t numberOfArguments = expectedNumberOfArguments; \
+    napi_value this; \
+    napi_value arguments[expectedNumberOfArguments]; \
+    statusName = napi_get_cb_info(env, info, &numberOfArguments, arguments, &this, nullptr); \
+    assert(statusName == napi_ok);
+
+#define getThisAndArguments_getMacro(_1,_2,_3,_4,_5,NAME,...) NAME
+#define getThisAndArguments(...) getThisAndArguments_getMacro(__VA_ARGS__, getThisAndArguments_StatusCheck, getThisAndArguments_NoStatusCheck)(__VA_ARGS__)
+
+
+
 #define getStringUtf8Length_NoStatusCheck(variableName, napiText) \
     napi_get_value_string_utf8(env, napiText, NULL, 0, &variableName);
 
@@ -156,6 +175,19 @@
 
 #define getArrayBuffer_getMacro(_1,_2,_3,_4,NAME,...) NAME
 #define getArrayBuffer(...) getArrayBuffer_getMacro(__VA_ARGS__, getArrayBuffer_StatusCheck, getArrayBuffer_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define getArrayBufferPointer_NoStatusCheck(variableName, napiArrayBuffer) \
+    napi_get_arraybuffer_info(env, napiArrayBuffer, &variableName, NULL);
+
+#define getArrayBufferPointer_StatusCheck(variableName, napiArrayBuffer, statusName) \
+    statusName = napi_get_arraybuffer_info(env, napiArrayBuffer, &variableName, NULL); \
+    assert(statusName == napi_ok);
+
+#define getArrayBufferPointer_getMacro(_1,_2,_3,NAME,...) NAME
+#define getArrayBufferPointer(...) getArrayBufferPointer_getMacro(__VA_ARGS__, getArrayBufferPointer_StatusCheck, getArrayBufferPointer_NoStatusCheck)(__VA_ARGS__)
 
 
 
