@@ -16,9 +16,12 @@
 #include <pthread.h>
 
 #include "napiMacros.h"
+#include "ultradbMacros.h"
 
 
-typedef unsigned long long DocumentDescriptor;
+#include <stdio.h>
+
+typedef long long DocumentDescriptor;
 
 enum NodeLocationType_e { LEFT, RIGHT };
 typedef enum NodeLocationType_e NodeLocationType;
@@ -27,19 +30,64 @@ typedef enum NodeLocationType_e NodeLocationType;
 struct DatabaseHeader_s {
   DocumentDescriptor freeSpace;       // address of first free space to place a document
   DocumentDescriptor baseDescriptor;  // real address = documentDescriptor - baseDescriptor;
-  DocumentDescriptor rootDocument;
+  DocumentDescriptor rootDocument;    // document descriptor of root document
 };
 typedef struct DatabaseHeader_s DatabaseHeader;
 
+
+struct i48_s {
+  unsigned      high;
+  unsigned long low;
+};
+typedef struct i48_s U48;
+typedef struct i48_s S48;
+
+typedef unsigned char            U8;
+typedef signed char              S8;
+typedef unsigned                 U16;
+typedef signed                   S16;
+typedef unsigned long            U32;
+typedef long                     S32;
+typedef unsigned long long       U64;
+typedef long long                S64;
+
+union Data_u {
+  void*                     pointer;
+  DatabaseHeader*           header;
+  char*      str;
+  U8*         u8;
+  S8*         s8;
+  U16*       u16;
+  S16*       s16;
+  U32*       u32;
+  S32*       s32;
+  U48*       u48;
+  S48*       s48;
+  U64*       u64;
+  S64*       s64;
+};
+typedef union Data_u Data;
+
+
+union DocumentSize_u {
+  unsigned char*            u8;
+  unsigned*                 u16;
+  unsigned long*            u32;
+  unsigned long long*       u64;
+};
+typedef union DocumentSize_u DocumentSize;
 
 
 struct Database_s {
     char*                   fileName;
     unsigned long           numberOfConnected;
     pthread_mutex_t         mutex;
+    pthread_mutex_t         mutexForNewDocument;
+    //pthread_cond_t	        cond;
+
 
     int                     fileDescriptor;
-    DatabaseHeader*         data;
+    Data                    data;
     size_t                  dataLength;
     unsigned int            pageSize;
 
@@ -60,6 +108,36 @@ Database*         databasesRoot;
 pthread_mutex_t   databasesMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
+/*
+  Supported data types
+  Utf8
+  Utf16
+  Latin1
+  Buffer
+  U8
+  U16
+  U32
+  U64
+  S8
+  S16
+  S32
+  S64
+  F32
+  F64
+
+  const data = [
+    {
+      name: 'left',
+      type: 'S64'
+    },
+    {
+      name: 'right',
+      type: 'S64'
+    }
+  ]
+
+
+*/
 
 
 napi_value raiseError(napi_env env, napi_value thisObj, char *errorSource) {
@@ -104,34 +182,179 @@ napi_value tEnd(napi_env env, const napi_callback_info info) {
     getArrayBufferPointer(currentDb, propertyData, status);
 
     pthread_mutex_unlock(&currentDb->mutex);
-
 }
 
 
+napi_value addUtf8(napi_env env, const napi_callback_info info) {
+    napi_status status;
+    var(result);
+    getThisAndArguments(thisJS, args, argsCount, 1, status);
 
-napi_value add(napi_env env, const napi_callback_info info) {
+    Database* db;
+    var(propertyData);
+    objPropertyGet(propertyData, thisJS, "_", status);
+    getArrayBufferPointer(db, propertyData, status);
+
+
+    size_t documentLength;
+    getStringUtf8Length(documentLength, args[0]);
+    documentLength++;
+
+
+    pthread_mutex_lock(&db->mutexForNewDocument);
+    Data data = db->data;
+
+    DocumentDescriptor freeSpace = data.header->freeSpace;
+    DocumentDescriptor documentLengthOffset = freeSpace + documentLength;
+    DocumentDescriptor newFreeSpace = documentLengthOffset;
+    DocumentDescriptor documentId;
+
+
+
+    if (documentLength < 32) {
+      documentId = newFreeSpace;
+      newFreeSpace += 1;
+      resizeIfNecesarryDbFile(db, data, newFreeSpace, result);
+      data.u8[documentLengthOffset] = documentLength | 0x80;                                    // deleted at the start
+    } else if (documentLength < 8192) {
+      newFreeSpace += 2;
+      documentId = newFreeSpace - 1;
+      resizeIfNecesarryDbFile(db, data, newFreeSpace, result);
+      *((U16*)(data.pointer + documentLengthOffset)) = documentLength | 0xA000;                 // deleted at the start
+    } else if (documentLength < 536870912) {
+      newFreeSpace += 4;
+      documentId = newFreeSpace - 1;
+      resizeIfNecesarryDbFile(db, data, newFreeSpace, result);
+      *((U32*)(data.pointer + documentLengthOffset)) = documentLength | 0xC0000000;             // deleted at the start
+    } else {
+      newFreeSpace += 8;
+      documentId = newFreeSpace - 1;
+      resizeIfNecesarryDbFile(db, data, newFreeSpace, result);
+      *((U64*)(data.pointer + documentLengthOffset)) = documentLength | 0xE000000000000000;     // deleted at the start
+    }
+    data.header->freeSpace = newFreeSpace;
+    pthread_mutex_unlock(&db->mutexForNewDocument);
+
+
+    getStringUtf8((db->data.str + freeSpace), args[0], documentLength);
+
+    db->data.u8[documentId] &= 0x7f; // document written and available as not deleted
+
+    newS64(result, documentId + db->data.header->baseDescriptor, status);
+    return result;
 
 }
 
-napi_value get(napi_env env, const napi_callback_info info) {
+napi_value getUtf8(napi_env env, const napi_callback_info info) {
+    napi_status status;
+    var(result);
+    getThisAndArguments(thisJS, args, argsCount, 1, status);
+
+    Database* db;
+    var(propertyData);
+    objPropertyGet(propertyData, thisJS, "_", status);
+    getArrayBufferPointer(db, propertyData, status);
+
+    DocumentDescriptor descriptor;
+    getS64(descriptor, args[0]);
+
+
+    descriptor += db->data.header->baseDescriptor;
+    if (descriptor < sizeof(DatabaseHeader) || descriptor >= db->data.header->freeSpace) {
+      raiseError(env, thisJS, "get(*)-><invalid document descriptor#1>");
+      setUndefined(result);
+      return result;
+    }
+
+    U8 docFlags = db->data.u8[descriptor];
+
+
+    if ((docFlags & 0x80) != 0) { // document is deleted
+      setUndefined(result);
+      return result;
+    }
+    size_t documentLength;
+    size_t documentStart;
+
+    switch (docFlags & 0x60) {
+      case 0x00:
+        documentLength = docFlags & 0x1f;
+        documentStart = descriptor - documentLength;
+        break;
+      case 0x20:
+        descriptor -= 1;
+        if (descriptor < sizeof(DatabaseHeader)) {
+          raiseError(env, thisJS, "get(*)-><invalid document descriptor#2>");
+          setUndefined(result);
+          return result;
+        }
+
+        documentLength = *((U16*)(db->data.pointer + descriptor)) & 0x1fff;
+        documentStart = descriptor - documentLength;
+        break;
+      case 0x40:
+        descriptor -= 3;
+        if (descriptor < sizeof(DatabaseHeader)) {
+          raiseError(env, thisJS, "get(*)-><invalid document descriptor#3>");
+          setUndefined(result);
+          return result;
+        }
+
+        documentLength = *((U32*)(db->data.pointer + descriptor)) & 0x1fffffff;
+        documentStart = descriptor - documentLength;
+
+        break;
+      case 0x60:
+        descriptor -= 7;
+        if (descriptor < sizeof(DatabaseHeader)) {
+          raiseError(env, thisJS, "get(*)-><invalid document descriptor#4>");
+          setUndefined(result);
+          return result;
+        }
+
+        documentLength = *((U64*)(db->data.pointer + descriptor)) & 0x1fffffffffffffff;
+        documentStart = descriptor - documentLength;
+
+        break;
+    }
+
+
+    if (documentStart < sizeof(DatabaseHeader)) {
+      raiseError(env, thisJS, "get(*)-><invalid document descriptor#5>");
+      setUndefined(result);
+      return result;
+    }
+    newStringUtf8(result, db->data.pointer + documentStart, strlen(db->data.pointer + documentStart), status);
+
+    return result;
+}
+
+napi_value setUtf8(napi_env env, const napi_callback_info info) {
 
 }
 
-napi_value set(napi_env env, const napi_callback_info info) {
+napi_value delUtf8(napi_env env, const napi_callback_info info) {
 
 }
 
-napi_value del(napi_env env, const napi_callback_info info) {
+napi_value movUtf8(napi_env env, const napi_callback_info info) {
 
 }
 
-napi_value mov(napi_env env, const napi_callback_info info) {
+napi_value cpyUtf8(napi_env env, const napi_callback_info info) {
 
 }
 
-napi_value cpy(napi_env env, const napi_callback_info info) {
+// ---
+
+napi_value getPart(napi_env env, const napi_callback_info info) {
 
 }
+
+napi_value setPart(napi_env env, const napi_callback_info info) {
+
+}
+
 
 
 napi_value close(napi_env env, const napi_callback_info info) {
@@ -238,7 +461,7 @@ napi_value close(napi_env env, const napi_callback_info info) {
 
       // free resources:
 
-      if (munmap(currentDb->data, currentDb->dataLength) == -1) {
+      if (munmap(currentDb->data.pointer, currentDb->dataLength) == -1) {
         raiseError(env, thisJS, "close->munmap");
         free(currentDb->fileName);
         free(currentDb);
@@ -273,7 +496,7 @@ napi_value CreateObject(napi_env env, const napi_callback_info info) {
     getStringUtf8Length(strLength, args[0]);
 
     char* fileName = (char*) malloc(strLength + 1);
-    getStringUtf8(fileName, args[0], strLength);
+    getStringUtf8Z(fileName, args[0], strLength);
 
 
     Database* currentDb;
@@ -327,6 +550,7 @@ napi_value CreateObject(napi_env env, const napi_callback_info info) {
         }
         currentDb->parent = previousDb;
         currentDb->mutex = PTHREAD_MUTEX_INITIALIZER;
+        currentDb->mutexForNewDocument = PTHREAD_MUTEX_INITIALIZER;
 
         newDb = true;
       }
@@ -361,33 +585,33 @@ napi_value CreateObject(napi_env env, const napi_callback_info info) {
         return obj;
       }
 
+      getU32(currentDb->pageSize, args[1]);
 
       if (sb.st_size == 0) {
-        getU32(currentDb->pageSize, args[1]);
         if (fallocate(currentDb->fileDescriptor, 0, 0, currentDb->pageSize) == -1) {
           pthread_mutex_unlock(&databasesMutex);
           raiseError(env, obj, "(CreateObject)->fallocate");
           return obj;
         }
-        currentDb->data = (DatabaseHeader*) mmap (0, currentDb->pageSize, PROT_READ|PROT_WRITE, MAP_SHARED, currentDb->fileDescriptor, 0);
+        currentDb->data.pointer = mmap (0, currentDb->pageSize, PROT_READ|PROT_WRITE, MAP_SHARED, currentDb->fileDescriptor, 0);
         currentDb->dataLength = currentDb->pageSize;
       } else {
-        currentDb->data = (DatabaseHeader*) mmap (0, sb.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, currentDb->fileDescriptor, 0);
+        currentDb->data.pointer = mmap (0, sb.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, currentDb->fileDescriptor, 0);
         currentDb->dataLength = sb.st_size;
       }
 
 
-      if (currentDb->data == MAP_FAILED) {
+      if (currentDb->data.pointer == MAP_FAILED) {
         pthread_mutex_unlock(&databasesMutex);
         raiseError(env, obj, "(CreateObject)->mmap");
         return obj;
       }
 
       if (sb.st_size == 0) {
-        DatabaseHeader* data = currentDb->data;
-        data->freeSpace = sizeof(DatabaseHeader);
-        data->baseDescriptor = 0;
-        data->rootDocument = 0;
+        DatabaseHeader* header = currentDb->data.header;
+        header->freeSpace = sizeof(DatabaseHeader);
+        header->baseDescriptor = 0;
+        header->rootDocument = 0;
       }
 
     } else {
@@ -410,23 +634,25 @@ napi_value CreateObject(napi_env env, const napi_callback_info info) {
     objPropertySet(obj, "close", methodFunction, status);
 
 
-    newFunction(methodFunction, add, status);
-    objPropertySet(obj, "add", methodFunction, status);
+    newFunction(methodFunction, addUtf8, status);
+    objPropertySet(obj, "addUtf8", methodFunction, status);
 
-    newFunction(methodFunction, get, status);
-    objPropertySet(obj, "get", methodFunction, status);
+    newFunction(methodFunction, getUtf8, status);
+    objPropertySet(obj, "getUtf8", methodFunction, status);
 
-    newFunction(methodFunction, set, status);
-    objPropertySet(obj, "set", methodFunction, status);
+    newFunction(methodFunction, setUtf8, status);
+    objPropertySet(obj, "setUtf8", methodFunction, status);
 
-    newFunction(methodFunction, del, status);
-    objPropertySet(obj, "del", methodFunction, status);
+    newFunction(methodFunction, delUtf8, status);
+    objPropertySet(obj, "delUtf8", methodFunction, status);
 
-    newFunction(methodFunction, mov, status);
-    objPropertySet(obj, "mov", methodFunction, status);
+    newFunction(methodFunction, movUtf8, status);
+    objPropertySet(obj, "movUtf8", methodFunction, status);
 
-    newFunction(methodFunction, cpy, status);
-    objPropertySet(obj, "cpy", methodFunction, status);
+    newFunction(methodFunction, cpyUtf8, status);
+    objPropertySet(obj, "cpyUtf8", methodFunction, status);
+
+
 
     newFunction(methodFunction, tStart, status);
     objPropertySet(obj, "tStart", methodFunction, status);

@@ -11,21 +11,27 @@
 
     getThis(variableName, numberOfArguments, expectedNumberOfArguments, statusName)
     getArguments(arguments, numberOfArguments, expectedNumberOfArguments, statusName)
+    getThisAndArguments(this, arguments, numberOfArguments, expectedNumberOfArguments, statusName)
 
     getStringUtf8Length(variableName, napiText, statusName)
     getStringUtf8(variableName, napiText, length, statusName)
     getArrayBuffer(variableName, lengthVariableName, napiArrayBuffer, statusName)
     getArrayBufferPointer(variableName, napiArrayBuffer, statusName)
-    getI32(variableName, napiVariableName, statusName)
+    getU32(variableName, napiVariableName, statusName)
+    getS32(variableName, napiVariableName, statusName)
+    getS64(variableName, napiVariableName, statusName)
 
     newObject(variableName, statusName)
     newFunction(variableName, functionName, statusName)
     newStringUtf8(variableName, text, length, statusName)
     newStringLatin1(variableName, text, length, statusName)
-    newI32(variableName, value, statusName)
-    newDouble(variableName, value, statusName)
+    newS32(variableName, value, statusName)
+    newS64(variableName, value, statusName)
+    newF64(variableName, value, statusName)
 
     assignArrayBuffer(variableName, buffer, length, statusName)
+
+    setUndefined(variableName, statusName)
 
     var(variableName)
 
@@ -153,11 +159,24 @@
 
 
 
-#define getStringUtf8_NoStatusCheck(variableName, napiText, length) \
+#define getStringUtf8Z_NoStatusCheck(variableName, napiText, length) \
     napi_get_value_string_utf8(env, napiText, variableName, length + 1, 0);
 
-#define getStringUtf8_StatusCheck(variableName, napiText, length, statusName) \
+#define getStringUtf8Z_StatusCheck(variableName, napiText, length, statusName) \
     statusName = napi_get_value_string_utf8(env, napiText, variableName, length + 1, 0); \
+    assert(statusName == napi_ok);
+
+#define getStringUtf8Z_getMacro(_1,_2,_3,_4,NAME,...) NAME
+#define getStringUtf8Z(...) getStringUtf8Z_getMacro(__VA_ARGS__, getStringUtf8Z_StatusCheck, getStringUtf8Z_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define getStringUtf8_NoStatusCheck(variableName, napiText, length) \
+    napi_get_value_string_utf8(env, napiText, variableName, length, 0);
+
+#define getStringUtf8_StatusCheck(variableName, napiText, length, statusName) \
+    statusName = napi_get_value_string_utf8(env, napiText, variableName, length, 0); \
     assert(statusName == napi_ok);
 
 #define getStringUtf8_getMacro(_1,_2,_3,_4,NAME,...) NAME
@@ -192,15 +211,15 @@
 
 
 
-#define getI32_NoStatusCheck(variableName, napiVariableName) \
+#define getS32_NoStatusCheck(variableName, napiVariableName) \
     napi_get_value_int32(env, napiVariableName, &variableName);
 
-#define getI32_StatusCheck(variableName, napiVariableName, statusName) \
+#define getS32_StatusCheck(variableName, napiVariableName, statusName) \
     statusName = napi_get_value_int32(env, napiVariableName, &variableName); \
     assert(statusName == napi_ok);
 
-#define getI32_getMacro(_1,_2,_3,NAME,...) NAME
-#define getI32(...) getI32_getMacro(__VA_ARGS__, getI32_StatusCheck, getI32_NoStatusCheck)(__VA_ARGS__)
+#define getS32_getMacro(_1,_2,_3,NAME,...) NAME
+#define getS32(...) getS32_getMacro(__VA_ARGS__, getS32_StatusCheck, getS32_NoStatusCheck)(__VA_ARGS__)
 
 
 
@@ -214,6 +233,20 @@
 
 #define getU32_getMacro(_1,_2,_3,NAME,...) NAME
 #define getU32(...) getU32_getMacro(__VA_ARGS__, getU32_StatusCheck, getU32_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+
+#define getS64_NoStatusCheck(variableName, napiVariableName) \
+    napi_get_value_int64(env, napiVariableName, &variableName);
+
+#define getS64_StatusCheck(variableName, napiVariableName, statusName) \
+    statusName = napi_get_value_int64(env, napiVariableName, &variableName); \
+    assert(statusName == napi_ok);
+
+#define getS64_getMacro(_1,_2,_3,NAME,...) NAME
+#define getS64(...) getS64_getMacro(__VA_ARGS__, getS64_StatusCheck, getS64_NoStatusCheck)(__VA_ARGS__)
 
 
 
@@ -269,28 +302,53 @@
 
 
 
-#define newI32_NoStatusCheck(variableName, value) \
-    napi_create_int32(env, value, &variableName)
+#define newS32_NoStatusCheck(variableName, value) \
+    napi_create_int32(env, value, &variableName);
 	
-#define newI32_StatusCheck(variableName, value, statusName) \
-    statusName = napi_create_int32(env, value, &variableName) \
+#define newS32_StatusCheck(variableName, value, statusName) \
+    statusName = napi_create_int32(env, value, &variableName); \
     assert(statusName == napi_ok);
 
-#define newI32_getMacro(_1,_2,_3,NAME,...) NAME
-#define newI32(...) newI32_getMacro(__VA_ARGS__, newI32_StatusCheck, newI32_NoStatusCheck)(__VA_ARGS__)
+#define newS32_getMacro(_1,_2,_3,NAME,...) NAME
+#define newS32(...) newS32_getMacro(__VA_ARGS__, newS32_StatusCheck, newS32_NoStatusCheck)(__VA_ARGS__)
 
 
 
 
-#define newDouble_NoStatusCheck(variableName, value) \
-    napi_create_double(env, value, &variableName)
+#define newS64_NoStatusCheck(variableName, value) \
+    napi_create_int64(env, value, &variableName);
 	
-#define newDoubleStatusCheck(variableName, value, statusName) \
-    statusName = napi_create_double(env, value, &variableName) \
+#define newS64_StatusCheck(variableName, value, statusName) \
+    statusName = napi_create_int64(env, value, &variableName); \
     assert(statusName == napi_ok);
 
-#define newDouble_getMacro(_1,_2,_3,NAME,...) NAME
-#define newDouble(...) newDouble_getMacro(__VA_ARGS__, newDouble_StatusCheck, newDouble_NoStatusCheck)(__VA_ARGS__)
+#define newS64_getMacro(_1,_2,_3,NAME,...) NAME
+#define newS64(...) newS64_getMacro(__VA_ARGS__, newS64_StatusCheck, newS64_NoStatusCheck)(__VA_ARGS__)
+
+
+
+#define newF64_NoStatusCheck(variableName, value) \
+    napi_create_double(env, value, &variableName);
+	
+#define newF64StatusCheck(variableName, value, statusName) \
+    statusName = napi_create_double(env, value, &variableName); \
+    assert(statusName == napi_ok);
+
+#define newF64_getMacro(_1,_2,_3,NAME,...) NAME
+#define newF64(...) newF64_getMacro(__VA_ARGS__, newF64_StatusCheck, newF64_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define setUndefined_NoStatusCheck(variableName) \
+    napi_get_undefined(env, &variableName);
+	
+#define setUndefinedStatusCheck(variableName, statusName) \
+    statusName = napi_get_undefined(env, &variableName); \
+    assert(statusName == napi_ok);
+
+#define setUndefined_getMacro(_1,_2,NAME,...) NAME
+#define setUndefined(...) setUndefined_getMacro(__VA_ARGS__, setUndefined_StatusCheck, setUndefined_NoStatusCheck)(__VA_ARGS__)
 
 
 
