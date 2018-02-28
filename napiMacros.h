@@ -8,18 +8,21 @@
     objPropertyGet(variableName, obj, propertyName, statusName)
     objPropertySet(obj, propertyName, variableName, statusName)
     objPropertyDel(obj, propertyName, statusName)
+    objAssignFunction(obj, tempNapiVariable, functionName, statusName)
 
     getThis(variableName, numberOfArguments, expectedNumberOfArguments, statusName)
     getArguments(arguments, numberOfArguments, expectedNumberOfArguments, statusName)
     getThisAndArguments(this, arguments, numberOfArguments, expectedNumberOfArguments, statusName)
 
     getStringUtf8Length(variableName, napiText, statusName)
-    getStringUtf8(variableName, napiText, length, statusName)
+    getStringUtf8ZLength(variableName, napiText, statusName)
+    getStringUtf8Z(variableName, napiText, length, statusName)
     getArrayBuffer(variableName, lengthVariableName, napiArrayBuffer, statusName)
     getArrayBufferPointer(variableName, napiArrayBuffer, statusName)
     getU32(variableName, napiVariableName, statusName)
     getS32(variableName, napiVariableName, statusName)
     getS64(variableName, napiVariableName, statusName)
+    getBoolean(variableName, napiVariableName, statusName)
 
     newObject(variableName, statusName)
     newFunction(variableName, functionName, statusName)
@@ -28,17 +31,28 @@
     newS32(variableName, value, statusName)
     newS64(variableName, value, statusName)
     newF64(variableName, value, statusName)
+    newBoolean(variableName, value, statusName)
 
     assignArrayBuffer(variableName, buffer, length, statusName)
 
     setUndefined(variableName, statusName)
+    setNull(variableName, statusName)
 
+    throwError(object, status)
     var(variableName)
+    function(functionName) ex. function(addNumbers) { }
 
   ---
   statusName is optional parameter, if provided then assertion against correct result of operation is performed
 
 */
+
+
+
+#define function_prepare(name) napi_value name (napi_env env, napi_callback_info info)
+#define function(name) function_prepare(name)
+
+
 
 
 #define objCreate_NoStatusCheck(variableName) \
@@ -128,6 +142,7 @@
 
 
 
+
 #define getThisAndArguments_NoStatusCheck(this, arguments, numberOfArguments, expectedNumberOfArguments) \
     size_t numberOfArguments = expectedNumberOfArguments; \
     napi_value this; \
@@ -146,6 +161,7 @@
 
 
 
+
 #define getStringUtf8Length_NoStatusCheck(variableName, napiText) \
     napi_get_value_string_utf8(env, napiText, NULL, 0, &variableName);
 
@@ -159,28 +175,30 @@
 
 
 
+#define getStringUtf8ZLength_NoStatusCheck(variableName, napiText) \
+    napi_get_value_string_utf8(env, napiText, NULL, 0, &variableName); \
+    variableName++
+
+#define getStringUtf8ZLength_StatusCheck(variableName, napiText, statusName) \
+    statusName = napi_get_value_string_utf8(env, napiText, NULL, 0, &variableName); \
+    assert(statusName == napi_ok); \
+    variableName++
+
+#define getStringUtf8ZLength_getMacro(_1,_2,_3,NAME,...) NAME
+#define getStringUtf8ZLength(...) getStringUtf8ZLength_getMacro(__VA_ARGS__, getStringUtf8ZLength_StatusCheck, getStringUtf8ZLength_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
 #define getStringUtf8Z_NoStatusCheck(variableName, napiText, length) \
-    napi_get_value_string_utf8(env, napiText, variableName, length + 1, 0);
+    napi_get_value_string_utf8(env, napiText, variableName, length, 0);
 
 #define getStringUtf8Z_StatusCheck(variableName, napiText, length, statusName) \
-    statusName = napi_get_value_string_utf8(env, napiText, variableName, length + 1, 0); \
+    statusName = napi_get_value_string_utf8(env, napiText, variableName, length, 0); \
     assert(statusName == napi_ok);
 
 #define getStringUtf8Z_getMacro(_1,_2,_3,_4,NAME,...) NAME
 #define getStringUtf8Z(...) getStringUtf8Z_getMacro(__VA_ARGS__, getStringUtf8Z_StatusCheck, getStringUtf8Z_NoStatusCheck)(__VA_ARGS__)
-
-
-
-
-#define getStringUtf8_NoStatusCheck(variableName, napiText, length) \
-    napi_get_value_string_utf8(env, napiText, variableName, length, 0);
-
-#define getStringUtf8_StatusCheck(variableName, napiText, length, statusName) \
-    statusName = napi_get_value_string_utf8(env, napiText, variableName, length, 0); \
-    assert(statusName == napi_ok);
-
-#define getStringUtf8_getMacro(_1,_2,_3,_4,NAME,...) NAME
-#define getStringUtf8(...) getStringUtf8_getMacro(__VA_ARGS__, getStringUtf8_StatusCheck, getStringUtf8_NoStatusCheck)(__VA_ARGS__)
 
 
 
@@ -237,7 +255,6 @@
 
 
 
-
 #define getS64_NoStatusCheck(variableName, napiVariableName) \
     napi_get_value_int64(env, napiVariableName, &variableName);
 
@@ -247,6 +264,19 @@
 
 #define getS64_getMacro(_1,_2,_3,NAME,...) NAME
 #define getS64(...) getS64_getMacro(__VA_ARGS__, getS64_StatusCheck, getS64_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define getBoolean_NoStatusCheck(variableName, napiVariableName) \
+    napi_get_value_bool(env, napiVariableName, &variableName);
+
+#define getBoolean_StatusCheck(variableName, napiVariableName, statusName) \
+    statusName = napi_get_value_bool(env, napiVariableName, &variableName); \
+    assert(statusName == napi_ok);
+
+#define getBoolean_getMacro(_1,_2,_3,NAME,...) NAME
+#define getBoolean(...) getBoolean_getMacro(__VA_ARGS__, getBoolean_StatusCheck, getBoolean_NoStatusCheck)(__VA_ARGS__)
 
 
 
@@ -289,6 +319,7 @@
 
 
 
+
 #define newStringLatin1_NoStatusCheck(variableName, text, length) \
     napi_create_string_latin1(env, text, length, &variableName);
 	
@@ -327,10 +358,11 @@
 
 
 
+
 #define newF64_NoStatusCheck(variableName, value) \
     napi_create_double(env, value, &variableName);
 	
-#define newF64StatusCheck(variableName, value, statusName) \
+#define newF64_StatusCheck(variableName, value, statusName) \
     statusName = napi_create_double(env, value, &variableName); \
     assert(statusName == napi_ok);
 
@@ -340,15 +372,40 @@
 
 
 
+#define newBoolean_NoStatusCheck(variableName, value) \
+    napi_get_boolean(env, value, &variableName);
+	
+#define newBoolean_StatusCheck(variableName, value, statusName) \
+    statusName = napi_get_boolean(env, value, &variableName); \
+    assert(statusName == napi_ok);
+
+#define newBoolean_getMacro(_1,_2,_3,NAME,...) NAME
+#define newBoolean(...) newBoolean_getMacro(__VA_ARGS__, newBoolean_StatusCheck, newBoolean_NoStatusCheck)(__VA_ARGS__)
+
+
+
 #define setUndefined_NoStatusCheck(variableName) \
     napi_get_undefined(env, &variableName);
 	
-#define setUndefinedStatusCheck(variableName, statusName) \
+#define setUndefined_StatusCheck(variableName, statusName) \
     statusName = napi_get_undefined(env, &variableName); \
     assert(statusName == napi_ok);
 
 #define setUndefined_getMacro(_1,_2,NAME,...) NAME
 #define setUndefined(...) setUndefined_getMacro(__VA_ARGS__, setUndefined_StatusCheck, setUndefined_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define setNull_NoStatusCheck(variableName) \
+    napi_get_null(env, &variableName);
+	
+#define setNull_StatusCheck(variableName, statusName) \
+    statusName = napi_get_null(env, &variableName); \
+    assert(statusName == napi_ok);
+
+#define setNull_getMacro(_1,_2,NAME,...) NAME
+#define setNull(...) setNull_getMacro(__VA_ARGS__, setNull_StatusCheck, setNull_NoStatusCheck)(__VA_ARGS__)
 
 
 
@@ -362,6 +419,34 @@
 
 #define assignArrayBuffer_getMacro(_1,_2,_3,_4,NAME,...) NAME
 #define assignArrayBuffer(...) assignArrayBuffer_getMacro(__VA_ARGS__, assignArrayBuffer_StatusCheck, assignArrayBuffer_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define throwError_NoStatusCheck(variableName) \
+    napi_throw(env, variableName);
+	
+#define throwError_StatusCheck(variableName, statusName) \
+    statusName = napi_throw(env, variableName); \
+    assert(statusName == napi_ok);
+
+#define throwError_getMacro(_1,_2,NAME,...) NAME
+#define throwError(...) throwError_getMacro(__VA_ARGS__, throwError_StatusCheck, throwError_NoStatusCheck)(__VA_ARGS__)
+
+
+
+
+#define objAssignFunction_NoStatusCheck(obj, methodFunction, functionName) \
+    newFunction(methodFunction, functionName); \
+    objPropertySet(obj, #functionName, methodFunction);
+	
+#define objAssignFunction_StatusCheck(obj, methodFunction, functionName, statusName) \
+    newFunction(methodFunction, functionName, statusName); \
+    objPropertySet(obj, #functionName, methodFunction, statusName);
+
+#define objAssignFunction_getMacro(_1,_2,_3,_4,NAME,...) NAME
+#define objAssignFunction(...) objAssignFunction_getMacro(__VA_ARGS__, objAssignFunction_StatusCheck, objAssignFunction_NoStatusCheck)(__VA_ARGS__)
+
 
 
 
