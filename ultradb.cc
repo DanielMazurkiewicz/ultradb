@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include <unistd.h>
-#include <time.h>
+//#include <unistd.h>
+//#include <time.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -8,7 +8,7 @@
 #include <string.h>
 
 
-#include <sys/types.h>
+//#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
@@ -18,11 +18,11 @@
 #include <pthread.h>
 
 
-#include <sys/ipc.h>
+//#include <sys/ipc.h>
 #include <sys/shm.h>
 
 
-#include <stdio.h>
+//#include <stdio.h>
 
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
@@ -34,7 +34,10 @@
 #include "ultradbMacros.h"
 #include "ultradbError.h"
 
+#include "methodsManagement.h"
 #include "methodsTransaction.h"
+#include "methodsCursor.h"
+#include "methodsVisibility.h"
 #include "methodsUtf8z.h"
 
 
@@ -246,6 +249,7 @@ function(CreateObject) {
       header->freeSpace = sizeof(DatabaseHeader);
       header->baseDescriptor = 0;
       header->rootDocument = 0;
+      header->freeSpacePrevious = 0;
     }
     sharedData->fileSize = fileSize;
 
@@ -281,7 +285,10 @@ function(CreateObject) {
 
     objAssignFunction(obj, methodFunction, _close, status);
 
+    methodsManagement(obj, methodFunction, status);
     methodsTransaction(obj, methodFunction, status);
+    methodsCursor(obj, methodFunction, status);
+    methodsVisibility(obj, methodFunction, status);
     methodsUtf8z(obj, methodFunction, status);
 
     return obj;

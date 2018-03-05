@@ -1,6 +1,6 @@
 {
   "name": "ultradb",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "No SQL document storage database",
   "main": "index.js",
   "gypfile": true,

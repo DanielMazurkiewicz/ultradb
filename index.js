@@ -56,6 +56,16 @@ var UltraDB = function(dbPath, pageSize) {
       db._connections--;
     }
   }
+
+  db.default = function(dataFormat) {
+    for (methodName in this) {
+      if (methodName.includes(dataFormat)) {
+        this[methodName.replace(dataFormat, '')] = this[methodName];
+      }
+    }
+    return this;
+  }
+
   dbs[dbPath] = db;
   return db;
 }

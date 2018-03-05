@@ -36,10 +36,10 @@ CFLAGS_CC_Debug := \
 	-fpermissive
 
 INCS_Debug := \
-	-I/home/daniel/.node-gyp/9.5.0/include/node \
-	-I/home/daniel/.node-gyp/9.5.0/src \
-	-I/home/daniel/.node-gyp/9.5.0/deps/uv/include \
-	-I/home/daniel/.node-gyp/9.5.0/deps/v8/include
+	-I/home/daniel/.node-gyp/9.7.1/include/node \
+	-I/home/daniel/.node-gyp/9.7.1/src \
+	-I/home/daniel/.node-gyp/9.7.1/deps/uv/include \
+	-I/home/daniel/.node-gyp/9.7.1/deps/v8/include
 
 DEFS_Release := \
 	'-DNODE_GYP_MODULE_NAME=ultradb' \
@@ -72,10 +72,10 @@ CFLAGS_CC_Release := \
 	-fpermissive
 
 INCS_Release := \
-	-I/home/daniel/.node-gyp/9.5.0/include/node \
-	-I/home/daniel/.node-gyp/9.5.0/src \
-	-I/home/daniel/.node-gyp/9.5.0/deps/uv/include \
-	-I/home/daniel/.node-gyp/9.5.0/deps/v8/include
+	-I/home/daniel/.node-gyp/9.7.1/include/node \
+	-I/home/daniel/.node-gyp/9.7.1/src \
+	-I/home/daniel/.node-gyp/9.7.1/deps/uv/include \
+	-I/home/daniel/.node-gyp/9.7.1/deps/v8/include
 
 OBJS := \
 	$(obj).target/$(TARGET)/ultradb.o

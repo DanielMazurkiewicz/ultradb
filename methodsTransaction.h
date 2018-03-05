@@ -3,9 +3,7 @@ function (start) {
     var(result);
     getThis(thisJS, numberOfArguments, 0, status);
 
-    LocalData* localData;
-    objPropertyGet(result, thisJS, "_", status);
-    getArrayBufferPointer(localData, result, status);
+    getLocalData(thisJS, localData, result, status);
 
     pthread_mutex_lock(&localData->sharedData->mutex);
 
@@ -19,9 +17,7 @@ function (stop) {
     var(result);
     getThis(thisJS, numberOfArguments, 0, status);
 
-    LocalData* localData;
-    objPropertyGet(result, thisJS, "_", status);
-    getArrayBufferPointer(localData, result, status);
+    getLocalData(thisJS, localData, result, status);
 
     pthread_mutex_unlock(&localData->sharedData->mutex);
 
