@@ -236,41 +236,41 @@ Using this methods prevents cross transaction lock while transaction on multiple
 
 ## Document
 ### docAddHidden(documentSize)
-    creates empty hidden document and returns documentInfo reference
+creates empty hidden document and returns documentInfo reference
 
 ### docAdd(documentSize)
-    creates empty document and returns documentInfo reference
+creates empty document and returns documentInfo reference
 
 ### docGet(documentId)
-    returns documentInfo reference for given documentId
+returns documentInfo reference for given documentId
 
 ### docGetHiddenAndVisible(documentId)
-    returns documentInfo reference for given documentId for both, visible and hidden documents
+returns documentInfo reference for given documentId for both, visible and hidden documents
 
 ### docGetId(documentInfo)
-    returns id of document based on given documentInfo reference
+returns id of document based on given documentInfo reference
 
 ## Database info and management
 ### isEmpty()
-    returns true if database is empty
+returns true if database is empty
 
 ### roll()
-    rolls database, replaces oldest documents in database
+rolls database, replaces oldest documents in database
 
 ### setRoot(documentId)
-    allows to set top level document if someone need a document with some kind of settings, or keeping any kind of structures where entry document is required
+allows to set top level document if someone need a document with some kind of settings, or keeping any kind of structures where entry document is required
 
 ### getRoot()
-    retrieves id of current root document
+retrieves id of current root document
 
 
 
 ## Document ID operations - 32 bit
 ### docIdVerify32(documentInfo, offset_within_document)
-    validates 32 bit checksum of document ID, provided indirectly by documentInfo, at given position
+validates 32 bit checksum of document ID, provided indirectly by documentInfo, at given position
 
 ### docIdCheckSet32(documentInfo, offset_within_document)
-    sets 32 bit checksum for document provided by documentInfo reference, checksum is set at given position, but it is recommended for checksum not to be last element in the document.
+sets 32 bit checksum for document provided by documentInfo reference, checksum is set at given position, but it is recommended for checksum not to be last element in the document.
 
 ## Document ID operations - 16 bit
 ### docIdVerify16(documentInfo, offset_within_document)
@@ -286,67 +286,67 @@ Using this methods prevents cross transaction lock while transaction on multiple
 
 ## Data operations - text in Utf8z format
 ### addUtf8z(text)
-    adds new document with given text, returns id of created document
+adds new document with given text, returns id of created document
 
 ### addUtf8zFixed(text, text_length_max, length_of_document)
-    adds new document with given text, checks if it fits given maximum length fot text in utf8 format, document is fixed length, remaining space after text is empty. returns id of created document
+adds new document with given text, checks if it fits given maximum length fot text in utf8 format, document is fixed length, remaining space after text is empty. returns id of created document
 
 ### getUtf8z(documentId)
-    returns text of document with given id
+returns text of document with given id
 
 ### setUtf8z(documentId, text)
-    sets/replaces text of document with given id
+sets/replaces text of document with given id
 
 ### addUtf8zAt(text, offset_within_document)
-    creates document with text and leaves begining of document empty, returns newly created document id
+creates document with text and leaves begining of document empty, returns newly created document id
 
 ### addUtf8zFixedAt(text, text_length_max, length_of_document, offset_within_document)
-    creates document with text placed in the middle of document, document is fixed size, returns newly created document id
+creates document with text placed in the middle of document, document is fixed size, returns newly created document id
 
 ### getUtf8zAt(documentId, offset_within_document)
-    returns text of document with given id at given position
+  returns text of document with given id at given position
 
 ### setUtf8zAt(documentId, text, text_length_max, offset_within_document)
-    sets/replaces text placed in the middle of document
+sets/replaces text placed in the middle of document
 
 ### partGetUtf8z(documentInfo, offset_within_document)
-    returns text located at given position in document based on given documentInfo (see "Document API")
+returns text located at given position in document based on given documentInfo (see "Document API")
 
 ### partSetUtf8z(documentInfoBuffer, text, text_length_max, offset_within_document)
-    sets/replaces text located at given position in document based on given documentInfo (see "Document API"), validates if it fits maximum length
+sets/replaces text located at given position in document based on given documentInfo (see "Document API"), validates if it fits maximum length
 
 
 
 ## Data operations - 64 bit float numbers
 ### addF64(number)
-    adds new document with given number, returns id of created document
+  adds new document with given number, returns id of created document
 
 ### addF64Fixed(number, length_of_document)
-    adds new document with given number, document is fixed length, remaining space after number is empty. returns id of created document
+adds new document with given number, document is fixed length, remaining space after number is empty. returns id of created document
 
 ### getF64(documentId)
-    returns number of document with given id
+returns number of document with given id
 
 ### setF64(documentId, number)
-    sets/replaces number of document with given id
+sets/replaces number of document with given id
 
 ### addF64At(number, offset_within_document)
-    creates document with number and leaves begining of document empty, returns newly created document id
+creates document with number and leaves begining of document empty, returns newly created document id
 
 ### addF64FixedAt(number, length_of_document, offset_within_document)
-    creates document with number placed in the middle of document, document is fixed size, returns newly created document id
+creates document with number placed in the middle of document, document is fixed size, returns newly created document id
 
 ### getF64At(documentId, offset_within_document)
-    returns number of document with given id at given position
+returns number of document with given id at given position
 
 ### setF64At(documentId, number, offset_within_document)
-    sets/replaces number placed in the middle of document
+sets/replaces number placed in the middle of document
 
 ### partGetF64(documentInfo, offset_within_document)
-    returns number located at given position in document based on given documentInfo (see "Document API")
+returns number located at given position in document based on given documentInfo (see "Document API")
 
 ### partSetF64(documentInfo, number, offset_within_document)
-    sets/replaces number located at given position in document based on given documentInfo (see "Document API")
+sets/replaces number located at given position in document based on given documentInfo (see "Document API")
 
 ## Data operations - 32 bit float numbers
 ### addF32(number)
