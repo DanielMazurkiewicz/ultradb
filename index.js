@@ -1,4 +1,5 @@
 var path = require('path');
+var crypto = require('crypto');
 var ultradb = require('./build/Release/ultradb.node');
 //var ultradb = require('./build/Debug/ultradb.node');
 var onExit = require('./onExit');
@@ -25,7 +26,10 @@ onExit(function() {
 function getDb(path, pageSize) {
   var db;
   for (var i = 0; i < retries; i++) {
-    db = ultradb(path, pageSize);
+    db = ultradb(path, pageSize, () => {
+      console.log('hahahahaha ;-)')
+      return crypto.randomBytes(8);
+    });
     if (db !== false) return db;
   }
   throw {from: 'ultradb', source: "CreateObject", sourceDetails: "getDb", message: "all retries failed", messageDetails: rootPath + ':' + path};

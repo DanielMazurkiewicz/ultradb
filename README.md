@@ -1,8 +1,55 @@
 # UltraDb
-Probably the fastest node database in the world, blazing simple, uses nodejs n-api interface, designed to work in node clusters. It is also very low level database, so inappropriate handling might lead to data corruption. Read documentation carefully before you use it. It also uses current NAPI interface, which isn't officialy tagged as stable.
+Probably the fastest node database in the world, blazing simple, uses nodejs n-api interface, designed to work in node clusters. It is also very low level database, so inappropriate handling might lead to data corruption. Read documentation carefully before you use it. 
 
-Works on 64 bit linux platforms. Not tested on other platforms.
+Works on 64 bit linux platforms. Other platforms not tested.
 
+
+# What for another database?
+
+If performance and/or costs of your infrastructure is for you a key factor you should consider use of Ultra DB. It is simple to use library, but requires little more attention from developer and more extensive testing, since there is not much control over what you do with database (for example there is no guarantee that database will trigger an error when trying to update document with non existing ID within a range of IDs in database, more over it might corrupt database). But in return you get a database, that runs within node process (no extra process, no extra overheads for TCP/IP stack, no waisteless copying data, no parsing queries, no switching to additional db tasks, no callbacks and promisses overheads ... and so on). With very little effort you can make pretty advanced services serving many thousands requests a second on a single cheap VPS machine.
+
+Some examples of usage:
+ * logging data
+ * storing sessions
+ * building custom database data structures (trees, chain lists, ...)
+ * microservices
+ * services
+ * storing training data of ai, ann, ... storing trained results...
+ * building more advanced databases with ultradb as their backend
+ * everywhere where you need document ID without additional querying for it (you receive document ID always as a result of adding document to database)
+
+# Important notes
+
+It is unsafe to allow access to documents by their id from any kind of public api (unless all documents are fixed size and you control modulo of document ID). In case of public API additional step of document id validation should be taken (combining document ID and random key saved in the document as public document ID, accessing via another fixed size documents lookup database, hashing id or hasing id combined with kind of checksum ... and so on). Current API profides set of document ID checksum functions (8 - 32 bit) and unique key for checksums for each database file - this will be helpfull to prevent accessing non existing documents.
+
+If document id's are used internally only and you have full control of how are they used, then you don't have to worry about above.
+
+If you need full ACID database you have to design data and recovery mechanisms yourself. But if you only add new records and read them, you're safe, you might consider this database kinda of ACID in that case.
+
+If you're going to use db in nodejs cluster make sure you use transactions where it needs to be synchronized across processes.
+
+Since transactions are blocking other processes that want to use particular database file/files it is a good idea to split data to databases for different document types each.
+
+Newly added documents are hidden till their content is filled into a database.
+
+# Database file structure
+
+```
+<header> <document1 data> <document1 length> ... <documentN data> <documentN length>
+```
+
+Document ID points indirectly to address of most significant byte of document length. Most significant byte contains additional 3 bit information:
+ * most significant bit if set to 1 means that document is hidden
+ * second and third most significant bit encodes document length field size:
+    - 00 : 1 byte
+    - 01 : 2 bytes
+    - 10 : 4 bytes
+    - 11 : 8 bytes
+
+Since Document ID is indirect address it is technically possible to remove phisically documents from the beginning of database while keeping same Document IDs.
+
+
+# Usage
 
 ## Load database library
 
@@ -26,7 +73,7 @@ const test1Db = UltraDB('./myDatabase.udb, 2048');
 
 ```
 
-This will open database with specified page size, default is 16384.
+This will open database with specified page size, default is 16384. Page size has an impact on performance, the bigger the better performance. The best if it is multiplication of expected average document size.
 
 
 ## Close database
@@ -57,7 +104,7 @@ This will retrieve document from database.
 
 If document is hidden it will return "null"
 
-If document doesn't exist it wil return "undefined"
+If document doesn't exist it will return "undefined"
 
 Note that "documentId" parameter is examined only briefly, so providing appropriate value is on your responsibility. Providing inappropriate value might lead to strange behaviour.
 
@@ -128,6 +175,8 @@ Note that "documentId" parameter is examined only briefly, so providing appropri
 testDb.roll();
 ```
 
+Writes new documents from begining of database file (with a guarantee of assigning non existing yet new document id's for new documents). It replaces oldest added documents in database.
+
 
 ## Hiding document
 
@@ -135,7 +184,7 @@ testDb.roll();
 testDb.hide(documentId);
 ```
 
-Note that "documentId" parameter is examined only briefly, so providing appropriate value is on your responsibility. Providing inappropriate value might lead to strange behaviour.
+Note that "documentId" parameter is examined only briefly, so providing appropriate value is on your responsibility. Providing inappropriate value might lead to strange behaviour or database corruption.
 
 
 ## Unhiding document
@@ -144,7 +193,7 @@ Note that "documentId" parameter is examined only briefly, so providing appropri
 testDb.unhide(documentId);
 ```
 
-Note that "documentId" parameter is examined only briefly, so providing appropriate value is on your responsibility. Providing inappropriate value might lead to strange behaviour.
+Note that "documentId" parameter is examined only briefly, so providing appropriate value is on your responsibility. Providing inappropriate value might lead to strange behaviour or database corruption.
 
 
 ## Database access synchronization
@@ -181,12 +230,298 @@ UltraDB.stop(multiTransaction123);
 
 Using this methods prevents cross transaction lock while transaction on multiple databases.
 
+# Full API list
 
-## In next releases:
- - methods to update, add, delete documents in 8, 16, 32, 64 bits signed and unsigned integers and UTF16
+(methods with skipped description simply have same functionality as previously described, but on different size of data)
 
-## Android termux prerequisites:
+## Document
+### docAddHidden(documentSize)
+    creates empty hidden document and returns documentInfo reference
+
+### docAdd(documentSize)
+    creates empty document and returns documentInfo reference
+
+### docGet(documentId)
+    returns documentInfo reference for given documentId
+
+### docGetHiddenAndVisible(documentId)
+    returns documentInfo reference for given documentId for both, visible and hidden documents
+
+### docGetId(documentInfo)
+    returns id of document based on given documentInfo reference
+
+## Database info and management
+### isEmpty()
+    returns true if database is empty
+
+### roll()
+    rolls database, replaces oldest documents in database
+
+### setRoot(documentId)
+    allows to set top level document if someone need a document with some kind of settings, or keeping any kind of structures where entry document is required
+
+### getRoot()
+    retrieves id of current root document
+
+
+
+## Document ID operations - 32 bit
+### docIdVerify32(documentInfo, offset_within_document)
+    validates 32 bit checksum of document ID, provided indirectly by documentInfo, at given position
+
+### docIdCheckSet32(documentInfo, offset_within_document)
+    sets 32 bit checksum for document provided by documentInfo reference, checksum is set at given position, but it is recommended for checksum not to be last element in the document.
+
+## Document ID operations - 16 bit
+### docIdVerify16(documentInfo, offset_within_document)
+### docIdCheckSet16(documentInfo, offset_within_document)
+
+
+
+## Document ID operations - 8 bit
+### docIdVerify8(documentInfo, offset_within_document)
+### docIdCheckSet8(documentInfo, offset_within_document)
+
+
+
+## Data operations - text in Utf8z format
+### addUtf8z(text)
+    adds new document with given text, returns id of created document
+
+### addUtf8zFixed(text, text_length_max, length_of_document)
+    adds new document with given text, checks if it fits given maximum length fot text in utf8 format, document is fixed length, remaining space after text is empty. returns id of created document
+
+### getUtf8z(documentId)
+    returns text of document with given id
+
+### setUtf8z(documentId, text)
+    sets/replaces text of document with given id
+
+### addUtf8zAt(text, offset_within_document)
+    creates document with text and leaves begining of document empty, returns newly created document id
+
+### addUtf8zFixedAt(text, text_length_max, length_of_document, offset_within_document)
+    creates document with text placed in the middle of document, document is fixed size, returns newly created document id
+
+### getUtf8zAt(documentId, offset_within_document)
+    returns text of document with given id at given position
+
+### setUtf8zAt(documentId, text, text_length_max, offset_within_document)
+    sets/replaces text placed in the middle of document
+
+### partGetUtf8z(documentInfo, offset_within_document)
+    returns text located at given position in document based on given documentInfo (see "Document API")
+
+### partSetUtf8z(documentInfoBuffer, text, text_length_max, offset_within_document)
+    sets/replaces text located at given position in document based on given documentInfo (see "Document API"), validates if it fits maximum length
+
+
+
+## Data operations - 64 bit float numbers
+### addF64(number)
+    adds new document with given number, returns id of created document
+
+### addF64Fixed(number, length_of_document)
+    adds new document with given number, document is fixed length, remaining space after number is empty. returns id of created document
+
+### getF64(documentId)
+    returns number of document with given id
+
+### setF64(documentId, number)
+    sets/replaces number of document with given id
+
+### addF64At(number, offset_within_document)
+    creates document with number and leaves begining of document empty, returns newly created document id
+
+### addF64FixedAt(number, length_of_document, offset_within_document)
+    creates document with number placed in the middle of document, document is fixed size, returns newly created document id
+
+### getF64At(documentId, offset_within_document)
+    returns number of document with given id at given position
+
+### setF64At(documentId, number, offset_within_document)
+    sets/replaces number placed in the middle of document
+
+### partGetF64(documentInfo, offset_within_document)
+    returns number located at given position in document based on given documentInfo (see "Document API")
+
+### partSetF64(documentInfo, number, offset_within_document)
+    sets/replaces number located at given position in document based on given documentInfo (see "Document API")
+
+## Data operations - 32 bit float numbers
+### addF32(number)
+### addF32Fixed(number, length_of_document)
+### getF32(documentId)
+### setF32(documentId, number)
+### addF32At(number, offset_within_document)
+### addF32FixedAt(number, length_of_document, offset_within_document)
+### getF32At(documentId, offset_within_document)
+### setF32At(documentId, number, offset_within_document)
+### partGetF32(documentInfo, offset_within_document)
+### partSetF32(documentInfo, number, offset_within_document)
+
+## Data operations - 64 bit unsigned integer numbers
+### addU64(number)
+### addU64Fixed(number, length_of_document)
+### getU64(documentId)
+### setU64(documentId, number)
+### addU64At(number, offset_within_document)
+### addU64FixedAt(number, length_of_document, offset_within_document)
+### getU64At(documentId, offset_within_document)
+### setU64At(documentId, number, offset_within_document)
+### partGetU64(documentInfo, offset_within_document)
+### partSetU64(documentInfo, number, offset_within_document)
+
+## Data operations - 48 bit unsigned integer numbers
+### addU48(number)
+### addU48Fixed(number, length_of_document)
+### getU48(documentId)
+### setU48(documentId, number)
+### addU48At(number, offset_within_document)
+### addU48FixedAt(number, length_of_document, offset_within_document)
+### getU48At(documentId, offset_within_document)
+### setU48At(documentId, number, offset_within_document)
+### partGetU48(documentInfo, offset_within_document)
+### partSetU48(documentInfo, number, offset_within_document)
+
+## Data operations - 32 bit unsigned integer numbers
+### addU32(number)
+### addU32Fixed(number, length_of_document)
+### getU32(documentId)
+### setU32(documentId, number)
+### addU32At(number, offset_within_document)
+### addU32FixedAt(number, length_of_document, offset_within_document)
+### getU32At(documentId, offset_within_document)
+### setU32At(documentId, number, offset_within_document)
+### partGetU32(documentInfo, offset_within_document)
+### partSetU32(documentInfo, number, offset_within_document)
+
+## Data operations - 24 bit unsigned integer numbers
+### addU24(number)
+### addU24Fixed(number, length_of_document)
+### getU24(documentId)
+### setU24(documentId, number)
+### addU24At(number, offset_within_document)
+### addU24FixedAt(number, length_of_document, offset_within_document)
+### getU24At(documentId, offset_within_document)
+### setU24At(documentId, number, offset_within_document)
+### partGetU24(documentInfo, offset_within_document)
+### partSetU24(documentInfo, number, offset_within_document)
+
+## Data operations - 16 bit unsigned integer numbers
+### addU16(number)
+### addU16Fixed(number, length_of_document)
+### getU16(documentId)
+### setU16(documentId, number)
+### addU16At(number, offset_within_document)
+### addU16FixedAt(number, length_of_document, offset_within_document)
+### getU16At(documentId, offset_within_document)
+### setU16At(documentId, number, offset_within_document)
+### partGetU16(documentInfo, offset_within_document)
+### partSetU16(documentInfo, number, offset_within_document)
+
+## Data operations - 8 bit unsigned integer numbers
+### addU8(number)
+### addU8Fixed(number, length_of_document)
+### getU8(documentId)
+### setU8(documentId, number)
+### addU8At(number, offset_within_document)
+### addU8FixedAt(number, length_of_document, offset_within_document)
+### getU8At(documentId, offset_within_document)
+### setU8At(documentId, number, offset_within_document)
+### partGetU8(documentInfo, offset_within_document)
+### partSetU8(documentInfo, number, offset_within_document)
+
+
+
+
+## Data operations - 64 bit signed integer numbers
+### addS64(number)
+### addS64Fixed(number, length_of_document)
+### getS64(documentId)
+### setS64(documentId, number)
+### addS64At(number, offset_within_document)
+### addS64FixedAt(number, length_of_document, offset_within_document)
+### getS64At(documentId, offset_within_document)
+### setS64At(documentId, number, offset_within_document)
+### partGetS64(documentInfo, offset_within_document)
+### partSetS64(documentInfo, number, offset_within_document)
+
+## Data operations - 48 bit signed integer numbers
+### addS48(number)
+### addS48Fixed(number, length_of_document)
+### getS48(documentId)
+### setS48(documentId, number)
+### addS48At(number, offset_within_document)
+### addS48FixedAt(number, length_of_document, offset_within_document)
+### getS48At(documentId, offset_within_document)
+### setS48At(documentId, number, offset_within_document)
+### partGetS48(documentInfo, offset_within_document)
+### partSetS48(documentInfo, number, offset_within_document)
+
+## Data operations - 32 bit signed integer numbers
+### addS32(number)
+### addS32Fixed(number, length_of_document)
+### getS32(documentId)
+### setS32(documentId, number)
+### addS32At(number, offset_within_document)
+### addS32FixedAt(number, length_of_document, offset_within_document)
+### getS32At(documentId, offset_within_document)
+### setS32At(documentId, number, offset_within_document)
+### partGetS32(documentInfo, offset_within_document)
+### partSetS32(documentInfo, number, offset_within_document)
+
+## Data operations - 24 bit signed integer numbers
+### addS24(number)
+### addS24Fixed(number, length_of_document)
+### getS24(documentId)
+### setS24(documentId, number)
+### addS24At(number, offset_within_document)
+### addS24FixedAt(number, length_of_document, offset_within_document)
+### getS24At(documentId, offset_within_document)
+### setS24At(documentId, number, offset_within_document)
+### partGetS24(documentInfo, offset_within_document)
+### partSetS24(documentInfo, number, offset_within_document)
+
+## Data operations - 16 bit signed integer numbers
+### addS16(number)
+### addS16Fixed(number, length_of_document)
+### getS16(documentId)
+### setS16(documentId, number)
+### addS16At(number, offset_within_document)
+### addS16FixedAt(number, length_of_document, offset_within_document)
+### getS16At(documentId, offset_within_document)
+### setS16At(documentId, number, offset_within_document)
+### partGetS16(documentInfo, offset_within_document)
+### partSetS16(documentInfo, number, offset_within_document)
+
+## Data operations - 8 bit signed integer numbers
+### addS8(number)
+### addS8Fixed(number, length_of_document)
+### getS8(documentId)
+### setS8(documentId, number)
+### addS8At(number, offset_within_document)
+### addS8FixedAt(number, length_of_document, offset_within_document)
+### getS8At(documentId, offset_within_document)
+### setS8At(documentId, number, offset_within_document)
+### partGetS8(documentInfo, offset_within_document)
+### partSetS8(documentInfo, number, offset_within_document)
+
+
+
+
+
+
+
+
+# Android termux prerequisites:
+
+```
 pkg install python2
 pkg install make
 pkg install clang
+```
+
+Currently not working on Android due to Androids lack of support for sys/shm. :(
+
 

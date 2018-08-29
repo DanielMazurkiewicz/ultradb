@@ -27,44 +27,60 @@
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
-#include "customTypes.h"
-#include "napiMacros.h"
+#include "generic/customTypes.h"
+#include "generic/napiMacros.h"
 
 #include "ultradbTypes.h"
 #include "ultradbMacros.h"
 #include "ultradbError.h"
 
-#include "methodsManagement.h"
-#include "methodsTransaction.h"
-#include "methodsCursor.h"
-#include "methodsVisibility.h"
-#include "methodsUtf8z.h"
+#include "methods/management.h"
+#include "methods/transaction.h"
+#include "methods/cursor.h"
+#include "methods/visibility.h"
+#include "methods/doc.h"
 
+#include "methodsData/utf8z.h"
+#include "methodsData/F64.h"
+#include "methodsData/F32.h"
+#include "methodsData/U64.h"
+#include "methodsData/S64.h"
+#include "methodsData/U32.h"
+#include "methodsData/S32.h"
+#include "methodsData/U16.h"
+#include "methodsData/S16.h"
+#include "methodsData/U8.h"
+#include "methodsData/S8.h"
 
+#include "methodsData/U24.h"
+#include "methodsData/U48.h"
+#include "methodsData/S24.h"
+#include "methodsData/S48.h"
 
-
-
-
+#include "methodsData/docId32.h"
+#include "methodsData/docId16.h"
+#include "methodsData/docId8.h"
 
 function(_close) {
     napi_status status;
     var(result);
 
-    getThis(thisJS, numberOfArguments, 0, status);
+    n_getThis(thisJS, numberOfArguments, 0, status);
 
     LocalData* localData;
-    objPropertyGet(result, thisJS, "_", status);
-    getArrayBufferPointer(localData, result, status);
+    n_objPropertyGet(result, thisJS, "_", status);
+    n_getArrayBufferPointer(localData, result, status);
 
-    newStringUtf8(result, "_", 1, status);
-    objPropertyDel(thisJS, result, status);
+    n_newStringUtf8(result, "_", 1, status);
+    n_objPropertyDel(thisJS, result, status);
 
-    objPropertyGet(result, thisJS, "_path", status);
+    n_objPropertyGet(result, thisJS, "_path", status);
     size_t dbFullPathLength;
-    getStringUtf8ZLength(dbFullPathLength, result);
+
+    n_getStringUtf8ZLength(dbFullPathLength, result, status);
 
     char dbFullPath[ dbFullPathLength ];
-    getStringUtf8Z(dbFullPath, result, dbFullPathLength);
+    n_getStringUtf8Z(dbFullPath, result, dbFullPathLength);
 
     SharedData* sharedData = localData->sharedData;
 
@@ -83,22 +99,22 @@ function(_close) {
 
 }
 
-function(CreateObject) {
+function(CreateObject) { // (path, pageSize, newDbCallback)
 
     napi_status status;
     var(result);
 
-    getArguments(args, argsCount, 2, status);
+    n_getArguments(args, argsCount, 3, status);
 
 
     //==========================
 
 
     size_t dbFullPathLength;
-    getStringUtf8ZLength(dbFullPathLength, args[0]);
+    n_getStringUtf8ZLength(dbFullPathLength, args[0]);
 
     char dbFullPath[ dbFullPathLength ];
-    getStringUtf8Z(dbFullPath, args[0], dbFullPathLength);
+    n_getStringUtf8Z(dbFullPath, args[0], dbFullPathLength);
 
 
 
@@ -130,7 +146,7 @@ function(CreateObject) {
           closeAssert(fileDescriptor, "CreateObject", "numberOfConnected", "close", dbFullPath);
 
 
-          newBoolean(result, false, status);
+          n_newBoolean(result, false, status);
           nanosleep((const struct timespec[]){{0, 5000000L}}, NULL);
           return result;
         }
@@ -218,7 +234,7 @@ function(CreateObject) {
     DbFileDataMapping fileData;
     size_t fileSize;
     U32 pageSize;
-    getU32(pageSize, args[1], status);
+    n_getU32(pageSize, args[1], status);
 
     if (sb.st_size == 0) {
       if (fallocate(fileDescriptor, 0, 0, pageSize) == -1) {
@@ -250,6 +266,12 @@ function(CreateObject) {
       header->baseDescriptor = 0;
       header->rootDocument = 0;
       header->freeSpacePrevious = 0;
+
+      n_getGlobal(global, status)
+      n_callWithNoArg(result, args[2], global, status);
+      U64* checksumKey;
+      n_getBufferPointer(checksumKey, result, status)
+      header->checksumKey = *checksumKey;
     }
     sharedData->fileSize = fileSize;
 
@@ -270,26 +292,47 @@ function(CreateObject) {
     //==========================
 
 
-    objCreate(obj, status);
+    n_objCreate(obj, status);
 
 
-    assignArrayBuffer(result, localData, sizeof(LocalData), status);
-    objPropertySet(obj, "_", result, status);
+    n_assignArrayBuffer(result, localData, sizeof(LocalData), status);
+    n_objPropertySet(obj, "_", result, status);
 
-    newS64(result, sharedDataKey, status);
-    objPropertySet(obj, "_key", result, status);
-    objPropertySet(obj, "_path", args[0], status);
+    n_newS64(result, sharedDataKey, status);
+    n_objPropertySet(obj, "_key", result, status);
+    n_objPropertySet(obj, "_path", args[0], status);
 
 
     var(methodFunction);
 
-    objAssignFunction(obj, methodFunction, _close, status);
+    n_objAssignFunction(obj, methodFunction, _close, status);
 
     methodsManagement(obj, methodFunction, status);
     methodsTransaction(obj, methodFunction, status);
     methodsCursor(obj, methodFunction, status);
     methodsVisibility(obj, methodFunction, status);
+    methodsDoc(obj, methodFunction, status);
+
     methodsUtf8z(obj, methodFunction, status);
+    methodsF64(obj, methodFunction, status);
+    methodsF32(obj, methodFunction, status);
+    methodsU64(obj, methodFunction, status);
+    methodsU32(obj, methodFunction, status);
+    methodsU16(obj, methodFunction, status);
+    methodsU8(obj, methodFunction, status);
+    methodsS64(obj, methodFunction, status);
+    methodsS32(obj, methodFunction, status);
+    methodsS16(obj, methodFunction, status);
+    methodsS8(obj, methodFunction, status);
+
+    methodsU24(obj, methodFunction, status);
+    methodsU48(obj, methodFunction, status);
+    methodsS24(obj, methodFunction, status);
+    methodsS48(obj, methodFunction, status);
+
+    methodsDocId32(obj, methodFunction, status);
+    methodsDocId16(obj, methodFunction, status);
+    methodsDocId8(obj, methodFunction, status);
 
     return obj;
 }
@@ -297,7 +340,7 @@ function(CreateObject) {
 napi_value Init(napi_env env, napi_value exports) {
   napi_status status;
   var(new_exports);
-  newFunction(new_exports, CreateObject, status);
+  n_newFunction(new_exports, CreateObject, status);
   return new_exports;
 }
 

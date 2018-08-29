@@ -47,7 +47,7 @@
 #define finishWithError(source, sourceDetails, message, messageDetails, useErrMessage) \
       result = prepareError(env, source, sourceDetails, message, messageDetails, useErrMessage); \
       throwError(result); \
-      newBoolean(result, false); \
+      n_newBoolean(result, false); \
       return result;
 
 
@@ -117,8 +117,8 @@
 
 #define getLocalData(thisJS, localData, result, status) \
     LocalData* localData; \
-    objPropertyGet(result, thisJS, "_", status); \
-    getArrayBufferPointer(localData, result, status); \
+    n_objPropertyGet(result, thisJS, "_", status); \
+    n_getArrayBufferPointer(localData, result, status); \
 
 #define documentReserveSpace_masks(source, localData, fileData_, freeSpace_, freeSpaceNew, fileSizeNew, fileSizeShared, documentAddress, documentLength, documentLengthOffset, mask8, mask16, mask32, mask64) \
     DbFileDataMapping fileData_ = localData->fileData; \
@@ -175,7 +175,7 @@
 
 #define documentReturnNullIfHidden(documentFlags, result) \
     if (documentIsHidden(documentFlags)) { \
-      setNull(result); \
+      n_setNull(result); \
       return result; \
     }
 
@@ -186,12 +186,12 @@
 \
     documentAddress = documentId - fileData.header->baseDescriptor; \
     if (documentAddress < sizeof(DatabaseHeader)) { \
-      setUndefined(result); \
+      n_setUndefined(result); \
       return result; \
     } \
 \
     if (documentAddress >= fileData.header->freeSpace) { \
-      setUndefined(result); \
+      n_setUndefined(result); \
       return result; \
     } \
 \
@@ -226,7 +226,7 @@
       case 0x20: \
         documentAddress -= 1; \
         if (documentAddress < sizeof(DatabaseHeader)) { \
-          setUndefined(result); \
+          n_setUndefined(result); \
           return result; \
         } \
 \
@@ -237,7 +237,7 @@
       case 0x40: \
         documentAddress -= 3; \
         if (documentAddress < sizeof(DatabaseHeader)) { \
-          setUndefined(result); \
+          n_setUndefined(result); \
           return result; \
         } \
 \
@@ -248,7 +248,7 @@
       case 0x60: \
         documentAddress -= 7; \
         if (documentAddress < sizeof(DatabaseHeader)) { \
-          setUndefined(result); \
+          n_setUndefined(result); \
           return result; \
         } \
 \
@@ -260,7 +260,37 @@
 
 #define documentAddressStartValidate(documentAddressStart, result) \
     if (documentAddressStart < sizeof(DatabaseHeader)) { \
-      setUndefined(result); \
+      n_setUndefined(result); \
       return result; \
     } \
+
+
+
+#define documentIdChecksum32(documentId, documentIdChecksum, fileData, documentIdChecksumHelper) \
+    DocumentDescriptor documentIdChecksumHelper = documentId ^ fileData.header->checksumKey; \
+    U32 documentIdChecksum = documentIdChecksumHelper & 0xffffffff; \
+\
+    documentIdChecksum = (documentIdChecksum >> 8) + ((documentIdChecksum & 0xff) << 24); \
+    documentIdChecksumHelper >>= 32; \
+    documentIdChecksum ^= documentIdChecksumHelper; \
+
+
+#define documentIdChecksum16(documentId, documentIdChecksum, fileData, documentIdChecksumHelper) \
+    documentIdChecksum32(documentId, documentIdChecksum, fileData, documentIdChecksumHelper); \
+\
+    documentIdChecksumHelper = documentIdChecksum >> 16; \
+\
+    documentIdChecksum &= 0xffff; \
+    documentIdChecksum = (documentIdChecksum >> 4) + ((documentIdChecksum & 0xf) << 12); \
+    documentIdChecksum ^= documentIdChecksumHelper; \
+
+
+#define documentIdChecksum8(documentId, documentIdChecksum, fileData, documentIdChecksumHelper) \
+    documentIdChecksum16(documentId, documentIdChecksum, fileData, documentIdChecksumHelper); \
+\
+    documentIdChecksumHelper = documentIdChecksum >> 8; \
+\
+    documentIdChecksum &= 0xff; \
+    documentIdChecksum = (documentIdChecksum >> 2) + ((documentIdChecksum & 0x3) << 6); \
+    documentIdChecksum ^= documentIdChecksumHelper; \
 

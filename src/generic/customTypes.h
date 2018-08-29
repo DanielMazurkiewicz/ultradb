@@ -12,6 +12,8 @@ typedef uint32_t             U32;
 typedef int32_t              S32;
 typedef uint64_t             U64;
 typedef int64_t              S64;
+typedef float                F32;
+typedef double               F64;
 
 struct i48_s {
   U16   high;
@@ -27,19 +29,42 @@ struct i24_s {
 typedef struct i24_s U24;
 typedef struct i24_s S24;
 
-#define getU24(destination, source) \
+#define t_getU24(destination, source) \
   destination = source->low; \
   destination |= (source->high) << 16;
 
-#define setU24(destination, source) \
+#define t_setU24(destination, source) \
   source->low = destination & 0xffff; \
   source->high = (destination << 16) & 0xff;
 
 
-#define getU48(destination, source) \
+#define t_getU48(destination, source) \
   destination = source->low; \
   destination |= (source->high) << 32;
 
-#define setU48(destination, source) \
+#define t_setU48(destination, source) \
   source->low = destination & 0xffffffff; \
   source->high = (destination << 32) & 0xffff;
+
+#define sizeOfF64 8
+#define sizeOfU64 8
+#define sizeOfS64 8
+
+#define sizeOfU53 8 //max safe integer in javascript
+#define sizeOfS53 8
+
+#define sizeOfU48 6
+#define sizeOfS48 6
+
+#define sizeOfF32 4
+#define sizeOfU32 4
+#define sizeOfS32 4
+
+#define sizeOfU24 3
+#define sizeOfS24 3
+
+#define sizeOfU16 2
+#define sizeOfS16 2
+
+#define sizeOfU8 1
+#define sizeOfS8 1

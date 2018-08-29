@@ -1,30 +1,30 @@
 function (previousOfAll) {
     napi_status status;
     var(result);
-    getThisAndArguments(thisJS, args, argsCount, 1, status);
+    n_getThisAndArguments(thisJS, args, argsCount, 1, status);
 
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
     documentGetAddressAndFlags("previousOfAll", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
     documentGetLengthAndStart(fileData, documentFlags, documentLength, documentAddressStart, documentAddress, result);
     documentAddressStartValidate(--documentAddressStart, result);
 
-    newS64(result, documentAddressStart + localData->fileData.header->baseDescriptor, status);
+    n_newU64(result, documentAddressStart + localData->fileData.header->baseDescriptor, status);
     return result;
 }
 
 function (previous) {
     napi_status status;
     var(result);
-    getThisAndArguments(thisJS, args, argsCount, 1, status);
+    n_getThisAndArguments(thisJS, args, argsCount, 1, status);
 
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
     documentGetAddressAndFlags("previous", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
     do {
@@ -34,7 +34,7 @@ function (previous) {
       documentFlags = localData->fileData.u8[documentAddress];
     } while (documentIsHidden(documentFlags));
 
-    newS64(result, documentAddress + localData->fileData.header->baseDescriptor, status);
+    n_newU64(result, documentAddress + localData->fileData.header->baseDescriptor, status);
     return result;
 }
 
@@ -42,7 +42,7 @@ function (previous) {
 function (lastOfAll) {
     napi_status status;
     var(result);
-    getThis(thisJS, numberOfArguments, 0, status);
+    n_getThis(thisJS, numberOfArguments, 0, status);
 
     getLocalData(thisJS, localData, result, status);
 
@@ -52,10 +52,10 @@ function (lastOfAll) {
     pthread_mutex_unlock(&localData->sharedData->mutexForNewDocument);
 
     if (freeSpace <= sizeof(DatabaseHeader)) {
-      setUndefined(result);
+      n_setUndefined(result);
       return result;
     }
-    newS64(result, fileData.header->baseDescriptor + freeSpace - 1, status);
+    n_newU64(result, fileData.header->baseDescriptor + freeSpace - 1, status);
     return result;
 }
 
@@ -63,7 +63,7 @@ function (lastOfAll) {
 function (last) {
     napi_status status;
     var(result);
-    getThis(thisJS, numberOfArguments, 0, status);
+    n_getThis(thisJS, numberOfArguments, 0, status);
 
     getLocalData(thisJS, localData, result, status);
 
@@ -73,7 +73,7 @@ function (last) {
     pthread_mutex_unlock(&localData->sharedData->mutexForNewDocument);
 
     if (documentAddress <= sizeof(DatabaseHeader)) {
-      setUndefined(result);
+      n_setUndefined(result);
       return result;
     }
     documentAddress--;
@@ -85,7 +85,7 @@ function (last) {
       documentFlags = localData->fileData.u8[documentAddress];
     }
 
-    newS64(result, documentAddress + fileData.header->baseDescriptor, status);
+    n_newU64(result, documentAddress + fileData.header->baseDescriptor, status);
     return result;
 }
 
@@ -94,9 +94,9 @@ function (last) {
 
 
 #define methodsCursor(obj, methodFunction, status) \
-  objAssignFunction(obj, methodFunction, last, status); \
-  objAssignFunction(obj, methodFunction, previous, status); \
+  n_objAssignFunction(obj, methodFunction, last, status); \
+  n_objAssignFunction(obj, methodFunction, previous, status); \
 \
-  objAssignFunction(obj, methodFunction, lastOfAll, status); \
-  objAssignFunction(obj, methodFunction, previousOfAll, status); \
+  n_objAssignFunction(obj, methodFunction, lastOfAll, status); \
+  n_objAssignFunction(obj, methodFunction, previousOfAll, status); \
 

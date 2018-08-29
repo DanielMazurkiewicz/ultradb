@@ -1,11 +1,20 @@
 
 
-typedef S64 DocumentDescriptor;
+typedef U64 DocumentDescriptor;
 typedef U64 DocumentAddress;
+
+struct DocumentInfo_s {
+    DocumentDescriptor  id;
+    DocumentAddress     start;
+    size_t              length;
+};
+typedef struct DocumentInfo_s DocumentInfo;
+
 
 
 struct DatabaseHeader_s {
   U64                 flags;                  // not used yet
+  U64                 checksumKey;            // checksum key
   DocumentAddress     freeSpace;              // address of first free space to place a document
   DocumentDescriptor  baseDescriptor;         // real address = documentDescriptor - baseDescriptor;
   DocumentAddress     rootDocument;           // location of root document in database
@@ -28,7 +37,6 @@ typedef union DbFileDataMapping_u DbFileDataMapping;
 
 
 
-
 struct SharedData_s {
     S32                     numberOfConnected;
     pthread_mutex_t         mutex;
@@ -37,10 +45,10 @@ struct SharedData_s {
     pthread_mutex_t         mutexForNewDocument;
     pthread_mutexattr_t     attrForNewDocument;
 
-
     size_t                  fileSize;
 };
 typedef struct SharedData_s SharedData;  
+
 
 
 struct LocalData_s {
