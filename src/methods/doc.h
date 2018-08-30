@@ -45,7 +45,7 @@ function (docGet) { // (documentId)
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    n_getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
     documentGetAddressAndFlags("docGet", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
     documentReturnNullIfHidden(documentFlags, result);
@@ -56,6 +56,7 @@ function (docGet) { // (documentId)
     documentInfo.id = documentId;
     documentInfo.start = documentAddressStart;
     documentInfo.length = documentLength;
+    n_newBuffer(result, &documentInfo, sizeof (documentInfo));
     return result;
 }
 
@@ -77,6 +78,7 @@ function (docGetHiddenAndVisible) { // (documentId)
     documentInfo.id = documentId;
     documentInfo.start = documentAddressStart;
     documentInfo.length = documentLength;
+    n_newBuffer(result, &documentInfo, sizeof (documentInfo));
     return result;
 }
 

@@ -62,7 +62,7 @@ function (getUtf8z) { // (documentId)
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    n_getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
     documentGetAddressAndFlags("getUtf8z", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
     documentReturnNullIfHidden(documentFlags, result);
@@ -82,7 +82,7 @@ function (setUtf8z) { // (documentId, text)
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    n_getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
     documentGetAddressAndFlags("setUtf8z", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
     documentReturnNullIfHidden(documentFlags, result);
@@ -181,7 +181,7 @@ function (getUtf8zAt) { // (documentId, at)
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    n_getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
 
     documentGetAddressAndFlags("getUtf8zAt", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
@@ -211,7 +211,7 @@ function (setUtf8zAt) { // (documentId, text, text_length_max, at)
     getLocalData(thisJS, localData, result, status);
 
     DocumentDescriptor  documentId;
-    n_getS64(documentId, args[0]);
+    n_getU64(documentId, args[0]);
 
     documentGetAddressAndFlags("setUtf8zAt", documentId, localData, fileData, fileSizeShared, documentFlags, documentAddress, result);
     documentReturnNullIfHidden(documentFlags, result);

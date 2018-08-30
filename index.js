@@ -27,7 +27,6 @@ function getDb(path, pageSize) {
   var db;
   for (var i = 0; i < retries; i++) {
     db = ultradb(path, pageSize, () => {
-      console.log('hahahahaha ;-)')
       return crypto.randomBytes(8);
     });
     if (db !== false) return db;

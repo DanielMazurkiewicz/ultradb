@@ -1,6 +1,6 @@
 {
   "name": "ultradb",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "No SQL document storage database",
   "main": "index.js",
   "gypfile": true,
@@ -22,7 +22,14 @@
     "database",
     "nodejs",
     "node",
-    "napi"
+    "napi",
+    "n-api",
+    "api",
+    "db",
+    "document",
+    "persistent",
+    "storage",
+    "file"
   ],
   "author": "Daniel Mazurkiewicz",
   "license": "MIT",

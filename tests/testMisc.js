@@ -1,5 +1,5 @@
 const UltraDB = require('../index.js');
-const testDb = UltraDB('./dbTestDoc.udb');
+const testDb = UltraDB('./dbTestMisc.udb');
 console.log(testDb._path);
 
 var docInfo = testDb.docAdd(1000);
@@ -51,29 +51,30 @@ var id = testDb.addS8At(-34, 10);
 console.log(testDb.getS8At(id, 10));
 
 var id = testDb.addU24At(16000000, 10);
-console.log(id);
 console.log(testDb.getU24At(id, 10));
 
 
 var id = testDb.addS24At(-8000000, 10);
-console.log(id);
 console.log(testDb.getS24At(id, 10));
 
 var id = testDb.addS24At(8000000, 10);
-console.log(id);
 console.log(testDb.getS24At(id, 10));
 
 
 var id = testDb.addU48At(20000000000, 10);
-console.log(id);
 console.log(testDb.getU48At(id, 10));
 
 var id = testDb.addS48At(-200000000010, 10);
-console.log(id);
 console.log(testDb.getS48At(id, 10));
 
 var id = testDb.addS48At(200000000010, 10);
-console.log(id);
 console.log(testDb.getS48At(id, 10));
 
+
+const crypto = require('crypto');
+const randomData = crypto.randomBytes(10);
+console.log(randomData);
+var id = testDb.addBufferAt(randomData, 8, 10);
+console.log(testDb.getBufferAt(id, 8, 10));
+console.log(testDb.getBuffer(id, -1));
 

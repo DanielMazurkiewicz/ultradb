@@ -4,19 +4,33 @@ Probably the fastest node database in the world, blazing simple, uses nodejs n-a
 Works on 64 bit linux platforms. Other platforms not tested.
 
 
-# What for another database?
-
-If performance and/or costs of your infrastructure is for you a key factor you should consider use of Ultra DB. It is simple to use library, but requires little more attention from developer and more extensive testing, since there is not much control over what you do with database (for example there is no guarantee that database will trigger an error when trying to update document with non existing ID within a range of IDs in database, more over it might corrupt database). But in return you get a database, that runs within node process (no extra process, no extra overheads for TCP/IP stack, no waisteless copying data, no parsing queries, no switching to additional db tasks, no callbacks and promisses overheads ... and so on). With very little effort you can make pretty advanced services serving many thousands requests a second on a single cheap VPS machine.
+# What for is this another database?
 
 Some examples of usage:
  * logging data
- * storing sessions
+ * storing sessions, large numger of documents
  * building custom database data structures (trees, chain lists, ...)
  * microservices
  * services
  * storing training data of ai, ann, ... storing trained results...
  * building more advanced databases with ultradb as their backend
  * everywhere where you need document ID without additional querying for it (you receive document ID always as a result of adding document to database)
+
+It:
+ * is small - arround 300kB
+ * is written in C for node js intentionally - it is not a wrapper, or port of another database
+ * is multicore processors friendly - scales up with node processes, multiple node instances/forks can work simultaneously on same database file
+ * is pretty simple and straight forward - it is not intention to hide any kind of abstraction from you
+ * supports text, integers, floats and data buffers
+ * supports cursors that allows to iterate through documents starting from newest and allows paging
+ * is VERY FAST, try it on SSD drive, compare with other databases, tell me the results - I'm sure you'll be pleased when you'll compare it with other databases for node js
+ * is Binary JSON (BSON) and other binary formats friendly
+
+If performance and/or costs of your infrastructure is for you a key factor you should consider use of Ultra DB. It is simple to use library, but requires little more attention from developer and more extensive testing, since there is not much control over what you do with database (for example there is no guarantee that database will trigger an error when trying to update document with non existing ID within a range of IDs in database, more over it might corrupt database). But in return you get a database, that runs within node process (no extra process, no extra overheads for TCP/IP stack, no waisteless copying data, no parsing queries, no switching to additional db tasks, no callbacks and promisses overheads ... and so on). With very little effort you can make pretty advanced services serving many thousands requests a second on a single cheap VPS machine.
+
+# Help highly appreciated! :-)
+
+Feel free to drop a line of code, write tests, prepare documentation, tutorials, guidelines, come up with ideas and so on!
 
 # Important notes
 
@@ -31,6 +45,8 @@ If you're going to use db in nodejs cluster make sure you use transactions where
 Since transactions are blocking other processes that want to use particular database file/files it is a good idea to split data to databases for different document types each.
 
 Newly added documents are hidden till their content is filled into a database.
+
+64 bit integers currently are actually limited to 53 bits. This is due javascript limitation for numbers, not database itself. 
 
 # Database file structure
 
@@ -255,7 +271,7 @@ returns id of document based on given documentInfo reference
 returns true if database is empty
 
 ### roll()
-rolls database, replaces oldest documents in database
+rolls database, new documents will replace oldest documents in database
 
 ### setRoot(documentId)
 allows to set top level document if someone need a document with some kind of settings, or keeping any kind of structures where entry document is required
@@ -284,6 +300,39 @@ sets 32 bit checksum for document provided by documentInfo reference, checksum i
 
 
 
+## Data operations - buffer in Buffer format
+### addBuffer(buffer, length)
+adds new document with given buffer, returns id of created document, if length is -1 adds entire buffer, otherwise adds begining number of bytes from buffer and if length is bigger than buffer length, rest of space is left empty
+
+### addBufferFixed(buffer, length, length_of_document)
+adds new document with given buffer, document is fixed length, remaining space after buffer is empty, writes only as many bytes as provided in "length" property (if -1 writes all of them, if bigger then length of buffer, then writes as much as available and rest remains empty), returns id of created document
+
+### getBuffer(documentId, length)
+returns to buffer "length" number of bytes of document with given id, if length is -1 then reads all of document content
+
+### setBuffer(documentId, buffer, length)
+sets/replaces buffer of document with given id, length points how many bytes to write (if -1 writes all of them, if bigger then length of buffer, then writes as much as available and rest remains unchanged)
+
+### addBufferAt(buffer, length, offset_within_document)
+creates document with buffer and leaves begining of document empty, returns newly created document id, length points how many bytes to write (if -1 writes all of them, if bigger then length of buffer, then writes as much as available and rest remains empty)
+
+### addBufferFixedAt(buffer, length, length_of_document, offset_within_document)
+creates document with buffer placed in the middle of document, document is fixed size, returns newly created document id, length points how many bytes to write (if -1 writes all of them, if bigger then length of buffer, then writes as much as available and rest remains empty)
+
+### getBufferAt(documentId, length, offset_within_document)
+returns buffer of document with given id at given position, if length is -1 then reads all content from given offset position
+
+### setBufferAt(documentId, buffer, length, offset_within_document)
+sets/replaces buffer placed in the middle of document, length points how many bytes to write (if -1 writes all of them, if bigger then length of buffer, then writes as much as available and rest remains unchanged)
+
+### partGetBuffer(documentInfo, length, offset_within_document)
+returns buffer located at given position in document based on given documentInfo (see "Document API"), if length is -1 then reads all content from given offset position
+
+### partSetBuffer(documentInfo, buffer, length, offset_within_document)
+sets/replaces buffer located at given position in document based on given documentInfo, length points how many bytes to write (if -1 writes all of them, if bigger then length of buffer, then writes as much as available and rest remains unchanged)
+
+
+
 ## Data operations - text in Utf8z format
 ### addUtf8z(text)
 adds new document with given text, returns id of created document
@@ -304,7 +353,7 @@ creates document with text and leaves begining of document empty, returns newly 
 creates document with text placed in the middle of document, document is fixed size, returns newly created document id
 
 ### getUtf8zAt(documentId, offset_within_document)
-  returns text of document with given id at given position
+returns text of document with given id at given position
 
 ### setUtf8zAt(documentId, text, text_length_max, offset_within_document)
 sets/replaces text placed in the middle of document
@@ -312,14 +361,14 @@ sets/replaces text placed in the middle of document
 ### partGetUtf8z(documentInfo, offset_within_document)
 returns text located at given position in document based on given documentInfo (see "Document API")
 
-### partSetUtf8z(documentInfoBuffer, text, text_length_max, offset_within_document)
+### partSetUtf8z(documentInfo, text, text_length_max, offset_within_document)
 sets/replaces text located at given position in document based on given documentInfo (see "Document API"), validates if it fits maximum length
 
 
 
 ## Data operations - 64 bit float numbers
 ### addF64(number)
-  adds new document with given number, returns id of created document
+adds new document with given number, returns id of created document
 
 ### addF64Fixed(number, length_of_document)
 adds new document with given number, document is fixed length, remaining space after number is empty. returns id of created document

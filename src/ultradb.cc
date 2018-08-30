@@ -40,6 +40,7 @@
 #include "methods/visibility.h"
 #include "methods/doc.h"
 
+#include "methodsData/buffer.h"
 #include "methodsData/utf8z.h"
 #include "methodsData/F64.h"
 #include "methodsData/F32.h"
@@ -270,7 +271,7 @@ function(CreateObject) { // (path, pageSize, newDbCallback)
       n_getGlobal(global, status)
       n_callWithNoArg(result, args[2], global, status);
       U64* checksumKey;
-      n_getBufferPointer(checksumKey, result, status)
+      n_getBufferPointer(checksumKey, result, status);
       header->checksumKey = *checksumKey;
     }
     sharedData->fileSize = fileSize;
@@ -313,6 +314,7 @@ function(CreateObject) { // (path, pageSize, newDbCallback)
     methodsVisibility(obj, methodFunction, status);
     methodsDoc(obj, methodFunction, status);
 
+    methodsBuffer(obj, methodFunction, status);
     methodsUtf8z(obj, methodFunction, status);
     methodsF64(obj, methodFunction, status);
     methodsF32(obj, methodFunction, status);
