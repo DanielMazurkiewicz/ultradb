@@ -33,7 +33,8 @@ CFLAGS_CC_Debug := \
 	-fno-rtti \
 	-fno-exceptions \
 	-std=gnu++1y \
-	-fpermissive
+	-fpermissive \
+	-Os
 
 INCS_Debug := \
 	-I/home/daniel/.node-gyp/10.9.0/include/node \
@@ -72,7 +73,8 @@ CFLAGS_CC_Release := \
 	-fno-rtti \
 	-fno-exceptions \
 	-std=gnu++1y \
-	-fpermissive
+	-fpermissive \
+	-Os
 
 INCS_Release := \
 	-I/home/daniel/.node-gyp/10.9.0/include/node \

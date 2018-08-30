@@ -76,8 +76,8 @@ function(_close) {
     n_objPropertyDel(thisJS, result, status);
 
     n_objPropertyGet(result, thisJS, "_path", status);
-    size_t dbFullPathLength;
 
+    size_t dbFullPathLength;
     n_getStringUtf8ZLength(dbFullPathLength, result, status);
 
     char dbFullPath[ dbFullPathLength ];

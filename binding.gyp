@@ -5,7 +5,7 @@
       "sources": [ "src/ultradb.cc" ],
       "conditions": [
         ["OS==\"linux\"", {
-          "cflags_cc": [ "-fpermissive" ]
+          "cflags_cc": [ "-fpermissive", "-Os" ]
         }]
       ]
     }

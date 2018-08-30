@@ -20,7 +20,7 @@ It:
  * is small - arround 300kB
  * is written in C for node js intentionally - it is not a wrapper, or port of another database
  * is multicore processors friendly - scales up with node processes, multiple node instances/forks can work simultaneously on same database file
- * is pretty simple and straight forward - it is not intention to hide any kind of abstraction from you
+ * is pretty simple and straight forward - not intended to hide any kind of abstraction from you
  * supports text, integers, floats and data buffers
  * supports cursors that allows to iterate through documents starting from newest and allows paging
  * is VERY FAST, try it on SSD drive, compare with other databases, tell me the results - I'm sure you'll be pleased when you'll compare it with other databases for node js
