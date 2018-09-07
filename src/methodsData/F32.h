@@ -41,7 +41,7 @@ function (addF32Fixed) { // (number, length_of_document) - creates document with
 
     documentUnhide(localData, documentAddress);
 
-    n_newS64(result, documentAddress + localData->fileData.header->baseDescriptor, status);
+    n_newU64(result, documentAddress + localData->fileData.header->baseDescriptor, status);
     return result;
 }
 

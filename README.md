@@ -46,7 +46,10 @@ Since transactions are blocking other processes that want to use particular data
 
 Newly added documents are hidden till their content is filled into a database.
 
-64 bit integers currently are actually limited to 53 bits. This is due javascript limitation for numbers, not database itself. 
+64 bit integers currently are actually limited to 53 bits. This is due javascript limitation for numbers, not database itself.
+
+Before you start, check examples located in "tests" directory on github repo:
+https://github.com/DanielMazurkiewicz/ultradb/tree/master/tests
 
 # Database file structure
 
@@ -265,6 +268,18 @@ returns documentInfo reference for given documentId for both, visible and hidden
 
 ### docGetId(documentInfo)
 returns id of document based on given documentInfo reference
+
+
+## Document ID obsfucation
+### docIdGenerateKey(bits, rounds, randomData)
+creates key which is a Buffer type containing instructions for encrypting/decrypting documentID, bits defines expected maximum size of documentID (6-64 bits), rounds defines ciphering complexity - the higher number the harder to crack (0 gives the weakest ciphering), randomData - at least 64 bytes of random buffer data has to be provided in order to be able to generate key - the more rounds the more data should be provided (approximatly each round should have additional 24 bytes of random data)
+
+### docIdEncrypt(documentId, key)
+encrypts given documentId with given key, returns Number which is a ciphered representation of documentId
+
+### docIdDecrypt(encryptedDocumentId, key)
+decrypts given encryptedDocumentID with given key, returns Number which is decrypted documentID
+
 
 ## Database info and management
 ### isEmpty()

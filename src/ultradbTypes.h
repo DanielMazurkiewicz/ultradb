@@ -23,7 +23,7 @@ struct DatabaseHeader_s {
   DocumentAddress     freeSpacePrevious;
   DocumentDescriptor  baseDescriptorPrevious;
 };
-typedef struct DatabaseHeader_s DatabaseHeader;
+typedef struct __attribute__((packed, aligned(1))) DatabaseHeader_s DatabaseHeader;
 
 
 
@@ -63,5 +63,7 @@ struct LocalData_s {
 
 };
 typedef struct LocalData_s LocalData;  
+
+
 
 

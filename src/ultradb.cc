@@ -39,6 +39,7 @@
 #include "methods/cursor.h"
 #include "methods/visibility.h"
 #include "methods/doc.h"
+#include "methods/docIdObfuscation.h"
 
 #include "methodsData/buffer.h"
 #include "methodsData/utf8z.h"
@@ -313,6 +314,7 @@ function(CreateObject) { // (path, pageSize, newDbCallback)
     methodsCursor(obj, methodFunction, status);
     methodsVisibility(obj, methodFunction, status);
     methodsDoc(obj, methodFunction, status);
+    methodsDocIdObfuscation(obj, methodFunction, status);
 
     methodsBuffer(obj, methodFunction, status);
     methodsUtf8z(obj, methodFunction, status);

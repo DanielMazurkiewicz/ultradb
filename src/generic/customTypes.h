@@ -14,6 +14,8 @@ typedef uint64_t             U64;
 typedef int64_t              S64;
 typedef float                F32;
 typedef double               F64;
+typedef __int128             S128;
+typedef unsigned __int128    U128;
 
 struct i48_s {
   U16   high;
@@ -45,6 +47,9 @@ typedef struct i24_s S24;
 #define t_setU48(destination, source) \
   source->low = destination & 0xffffffff; \
   source->high = (destination << 32) & 0xffff;
+
+#define sizeOfU128 16
+#define sizeOfS128 16
 
 #define sizeOfF64 8
 #define sizeOfU64 8
